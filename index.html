@@ -6,6 +6,8 @@
 <title>フリーペーパー 読者アンケート集計</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Bebas+Neue&display=swap');
 
@@ -259,6 +261,30 @@
 
   .btn:hover { opacity: 0.85; }
   .btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn.pdf { background: #c0392b; color: #fff; }
+
+  /* PDFオーバーレイ */
+  #pdf-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #pdf-overlay.active { display: flex; }
+  #pdf-overlay .msg { color: #fff; font-size: 14px; font-family: 'Noto Sans JP', sans-serif; }
+  #pdf-overlay .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid #333;
+    border-top-color: #e8b84b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
@@ -282,8 +308,15 @@
     <div class="status-dot"></div>
     <span>自動集計</span>
     <span id="last-updated">—</span>
+    <button class="btn pdf" onclick="exportPDF()" style="margin-left:12px;">📄 PDFレポート出力</button>
   </div>
 </header>
+
+<!-- PDFレンダリング中オーバーレイ -->
+<div id="pdf-overlay">
+  <div class="spinner"></div>
+  <div class="msg" id="pdf-msg">PDFを生成しています...</div>
+</div>
 
 <div class="issue-tabs" id="issueTabs"></div>
 
@@ -822,7 +855,187 @@ function rebuildTabs() {
   });
 }
 
-// ====== 初期化 ======
+// ====== PDF出力 ======
+async function exportPDF() {
+  const loadedIssues = Object.keys(ISSUES);
+  if (loadedIssues.length === 0) {
+    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
+    return;
+  }
+
+  const overlay = document.getElementById('pdf-overlay');
+  const msg = document.getElementById('pdf-msg');
+  overlay.classList.add('active');
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const margin = 15;
+    const accent = [232, 184, 75];
+    const dark = [26, 26, 26];
+
+    // ===== 表紙 =====
+    msg.textContent = '表紙を作成中...';
+    pdf.setFillColor(...dark);
+    pdf.rect(0, 0, W, H, 'F');
+
+    pdf.setFillColor(...accent);
+    pdf.rect(0, 0, W, 4, 'F');
+    pdf.rect(0, H - 4, W, 4, 'F');
+
+    pdf.setTextColor(...accent);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(36);
+    pdf.text('FREEC', W / 2, 80, { align: 'center' });
+
+    pdf.setTextColor(200, 200, 200);
+    pdf.setFontSize(13);
+    pdf.text('Reader Survey Report', W / 2, 92, { align: 'center' });
+
+    pdf.setFillColor(...accent);
+    pdf.rect(margin, 105, W - margin * 2, 0.5, 'F');
+
+    pdf.setTextColor(240, 240, 240);
+    pdf.setFontSize(16);
+    pdf.text('\u8aad\u8005\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08\u30ec\u30dd\u30fc\u30c8', W / 2, 118, { align: 'center' });
+
+    const issueLabel = loadedIssues.join(' \u30fb ');
+    pdf.setFontSize(12);
+    pdf.setTextColor(180, 180, 180);
+    pdf.text(issueLabel, W / 2, 130, { align: 'center' });
+
+    // サマリーテーブル
+    const tableTop = 150;
+    const cols = ['\u53f7', '\u7dcf\u56de\u7b54\u6570', '\u7537\u6027\u6bd4\u7387', '\u5973\u6027\u6bd4\u7387', '\u5e02\u5185\u7387', '\u6700\u591a\u5e74\u4ee3'];
+    const colWidths = [20, 30, 28, 28, 28, 28];
+    let cx = margin;
+    pdf.setFillColor(...accent);
+    pdf.rect(margin, tableTop, W - margin * 2, 9, 'F');
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(9);
+    cols.forEach((col, i) => {
+      pdf.text(col, cx + colWidths[i] / 2, tableTop + 6, { align: 'center' });
+      cx += colWidths[i];
+    });
+
+    loadedIssues.forEach((issue, ri) => {
+      const data = ISSUES[issue];
+      const gt = Object.values(data.gender).reduce((a, b) => a + b, 0);
+      const maleR = gt ? Math.round(data.gender['\u7537\u6027'] / gt * 100) : 0;
+      const lt = Object.values(data.location).reduce((a, b) => a + b, 0);
+      const localR = lt ? Math.round((data.location['\u672d\u5e4c\u5e02\u5185'] || 0) / lt * 100) : 0;
+      const topAge = Object.entries(data.age).sort((a, b) => b[1] - a[1])[0][0];
+      const rowVals = [issue, `${data.total}\u4ef6`, `${maleR}%`, `${100 - maleR}%`, `${localR}%`, topAge];
+      const rowY = tableTop + 9 + ri * 10;
+      pdf.setFillColor(ri % 2 === 0 ? 40 : 50, ri % 2 === 0 ? 40 : 50, ri % 2 === 0 ? 40 : 50);
+      pdf.rect(margin, rowY, W - margin * 2, 10, 'F');
+      cx = margin;
+      pdf.setTextColor(220, 220, 220);
+      pdf.setFontSize(9);
+      rowVals.forEach((val, i) => {
+        pdf.text(val, cx + colWidths[i] / 2, rowY + 6.5, { align: 'center' });
+        cx += colWidths[i];
+      });
+    });
+
+    pdf.setTextColor(120, 120, 120);
+    pdf.setFontSize(8);
+    pdf.text(`\u751f\u6210\u65e5\u6642: ${new Date().toLocaleString('ja-JP')}`, W / 2, H - 20, { align: 'center' });
+
+    // ===== 各号ページ =====
+    const savedIssue = currentIssue;
+
+    for (let idx = 0; idx < loadedIssues.length; idx++) {
+      const issue = loadedIssues[idx];
+      msg.textContent = `${issue} のグラフを描画中... (${idx + 1}/${loadedIssues.length})`;
+
+      // 一時的にその号に切り替えて描画
+      currentIssue = issue;
+      renderAll();
+      await new Promise(r => setTimeout(r, 600));
+
+      pdf.addPage();
+
+      // ヘッダー
+      pdf.setFillColor(...dark);
+      pdf.rect(0, 0, W, H, 'F');
+      pdf.setFillColor(...accent);
+      pdf.rect(0, 0, W, 12, 'F');
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text(`FREEC  ${issue}  \u96c6\u8a08\u7d50\u679c`, margin, 8.5);
+
+      // KPI
+      const data = ISSUES[issue];
+      const gt = Object.values(data.gender).reduce((a, b) => a + b, 0);
+      const maleR = gt ? Math.round(data.gender['\u7537\u6027'] / gt * 100) : 0;
+      const lt = Object.values(data.location).reduce((a, b) => a + b, 0);
+      const localR = lt ? Math.round((data.location['\u672d\u5e4c\u5e02\u5185'] || 0) / lt * 100) : 0;
+      const topAge = Object.entries(data.age).sort((a, b) => b[1] - a[1])[0][0];
+      const topPurpose = Object.entries(data.purpose).sort((a, b) => b[1] - a[1])[0][0];
+
+      const kpis = [
+        ['\u7dcf\u56de\u7b54\u6570', `${data.total}\u4ef6`],
+        ['\u7537\u6027\u6bd4\u7387', `${maleR}%`],
+        ['\u5973\u6027\u6bd4\u7387', `${100 - maleR}%`],
+        ['\u5e02\u5185\u7387', `${localR}%`],
+        ['\u6700\u591a\u5e74\u4ee3', topAge],
+      ];
+      const kpiW = (W - margin * 2) / kpis.length;
+      kpis.forEach(([label, val], i) => {
+        const kx = margin + i * kpiW;
+        pdf.setFillColor(35, 35, 35);
+        pdf.roundedRect(kx + 1, 16, kpiW - 2, 20, 2, 2, 'F');
+        pdf.setFillColor(...accent);
+        pdf.rect(kx + 1, 16, kpiW - 2, 1.5, 'F');
+        pdf.setTextColor(140, 140, 140);
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(label, kx + kpiW / 2, 22, { align: 'center' });
+        pdf.setTextColor(...accent);
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(val, kx + kpiW / 2, 32, { align: 'center' });
+      });
+
+      // チャートキャプチャ
+      const chartIds = [
+        { id: 'genderChart', x: margin, y: 42, w: 82, h: 55 },
+        { id: 'locationChart', x: margin + 88, y: 42, w: 82, h: 55 },
+        { id: 'ageChart', x: margin, y: 102, w: W - margin * 2, h: 50 },
+        { id: 'purposeChart', x: margin, y: 157, w: W - margin * 2, h: 55 },
+        { id: 'genreChart', x: margin, y: 217, w: W - margin * 2, h: 65 },
+      ];
+
+      for (const { id, x, y, w, h } of chartIds) {
+        const canvas = document.getElementById(id);
+        if (!canvas) continue;
+        const imgData = canvas.toDataURL('image/png');
+        pdf.setFillColor(30, 30, 30);
+        pdf.roundedRect(x, y, w, h, 2, 2, 'F');
+        pdf.addImage(imgData, 'PNG', x + 2, y + 2, w - 4, h - 4);
+      }
+    }
+
+    // 元の号に戻す
+    currentIssue = savedIssue;
+    renderAll();
+
+    msg.textContent = 'PDFを保存中...';
+    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
+    pdf.save(`FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_${today}.pdf`);
+
+  } catch (e) {
+    alert('PDF生成中にエラーが発生しました: ' + e.message);
+    console.error(e);
+  } finally {
+    overlay.classList.remove('active');
+  }
+}
+
+
 buildTabs();
 renderAll();
 
