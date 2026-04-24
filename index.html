@@ -826,6 +826,13 @@ function rebuildTabs() {
 buildTabs();
 renderAll();
 
+// 起動時に全URLを自動読み込み
+(async () => {
+  for (const [issue, url] of Object.entries(ISSUE_URLS)) {
+    await loadIssueFromUrl(issue, url);
+  }
+})();
+
 // 5分ごとに全登録URLを自動更新
 setInterval(async () => {
   const entries = Object.entries(ISSUE_URLS);
