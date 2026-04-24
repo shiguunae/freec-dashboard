@@ -855,6 +855,256 @@ function rebuildTabs() {
   });
 }
 
+// ====== PDF出力（印刷方式）======
+function exportPDF() {
+  const loadedIssues = Object.keys(ISSUES);
+  if (loadedIssues.length === 0) {
+    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
+    return;
+  }
+
+  // 印刷用ウィンドウを生成
+  const printWin = window.open('', '_blank');
+
+  // 各号のデータをHTML化
+  function pct(val, total) {
+    return total > 0 ? Math.round(val / total * 100) : 0;
+  }
+
+  let pagesHTML = '';
+
+  loadedIssues.forEach((issue, idx) => {
+    const data = ISSUES[issue];
+    const gt = Object.values(data.gender).reduce((a,b)=>a+b,0);
+    const maleR = pct(data.gender['男性']||0, gt);
+    const lt = Object.values(data.location).reduce((a,b)=>a+b,0);
+    const localR = pct(data.location['札幌市内']||0, lt);
+    const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
+    const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0][0];
+
+    // グラフをcanvasからdataURLで取得（現在表示中の号）
+    // 各号のbar chartを簡易SVGで生成
+    function barSVG(obj, color, maxW=300) {
+      const entries = Object.entries(obj).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+      const maxVal = Math.max(...entries.map(([,v])=>v));
+      const rowH = 24;
+      const svgH = entries.length * rowH + 10;
+      const colors2 = ['#e8b84b','#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e91e63'];
+      let rows = entries.map(([k,v],i) => {
+        const w = Math.round((v / maxVal) * maxW);
+        const p = pct(v, entries.reduce((a,[,b])=>a+b,0));
+        return `<g transform="translate(0,${i*rowH})">
+          <text x="0" y="16" font-size="11" fill="#333" font-family="sans-serif">${k}</text>
+          <rect x="80" y="5" width="${w}" height="14" rx="3" fill="${colors2[i%colors2.length]}"/>
+          <text x="${80+w+5}" y="16" font-size="10" fill="#555" font-family="sans-serif">${v}件(${p}%)</text>
+        </g>`;
+      }).join('');
+      return `<svg width="460" height="${svgH}" xmlns="http://www.w3.org/2000/svg">${rows}</svg>`;
+    }
+
+    function pieSVG(obj, colors2) {
+      const entries = Object.entries(obj).filter(([,v])=>v>0);
+      const total = entries.reduce((a,[,v])=>a+v,0);
+      const cx=90, cy=80, r=65;
+      let startAngle = -Math.PI/2;
+      let slices = '';
+      let legend = '';
+      entries.forEach(([k,v],i) => {
+        const angle = (v/total)*Math.PI*2;
+        const endAngle = startAngle + angle;
+        const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+        const x2=cx+r*Math.cos(endAngle), y2=cy+r*Math.sin(endAngle);
+        const large = angle > Math.PI ? 1 : 0;
+        const midAngle = startAngle + angle/2;
+        const lx=cx+(r*0.65)*Math.cos(midAngle), ly=cy+(r*0.65)*Math.sin(midAngle);
+        const p = pct(v, total);
+        slices += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${colors2[i%colors2.length]}" stroke="white" stroke-width="2"/>`;
+        if(p > 3) slices += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="white" font-family="sans-serif" font-weight="bold">${p}%</text>`;
+        legend += `<g transform="translate(0,${i*20})"><rect width="12" height="12" rx="2" fill="${colors2[i%colors2.length]}"/><text x="16" y="10" font-size="11" fill="#333" font-family="sans-serif">${k}: ${v}件</text></g>`;
+        startAngle = endAngle;
+      });
+      return `<svg width="320" height="170" xmlns="http://www.w3.org/2000/svg">
+        ${slices}
+        <g transform="translate(185,20)">${legend}</g>
+      </svg>`;
+    }
+
+    const gColors = ['#2980b9','#e91e63','#27ae60','#e67e22'];
+    const lColors = ['#e8b84b','#27ae60','#e67e22','#8e44ad'];
+
+    pagesHTML += `
+    <div class="page">
+      <div class="page-header">
+        <span class="logo-text">FREEC</span>
+        <span class="issue-name">${issue} 集計結果</span>
+        <span class="date">${new Date().toLocaleDateString('ja-JP')}</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">総回答数</div><div class="kpi-val">${data.total}件</div></div>
+        <div class="kpi"><div class="kpi-label">男性比率</div><div class="kpi-val">${maleR}%</div></div>
+        <div class="kpi"><div class="kpi-label">女性比率</div><div class="kpi-val">${100-maleR}%</div></div>
+        <div class="kpi"><div class="kpi-label">市内率</div><div class="kpi-val">${localR}%</div></div>
+        <div class="kpi"><div class="kpi-label">最多年代</div><div class="kpi-val">${topAge}</div></div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-box">
+          <div class="chart-label">男女比</div>
+          ${pieSVG(data.gender, gColors)}
+        </div>
+        <div class="chart-box">
+          <div class="chart-label">居住地</div>
+          ${pieSVG(data.location, lColors)}
+        </div>
+      </div>
+
+      <div class="chart-box full">
+        <div class="chart-label">年代別</div>
+        ${barSVG(data.age, '#e8b84b')}
+      </div>
+
+      <div class="chart-box full">
+        <div class="chart-label">来訪目的</div>
+        ${barSVG(data.purpose, '#16a085')}
+      </div>
+
+      <div class="chart-box full">
+        <div class="chart-label">よく行くジャンル</div>
+        ${barSVG(data.genre, '#e8b84b')}
+      </div>
+    </div>
+    `;
+  });
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>FREEC アンケート集計レポート</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fff; color: #222; }
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+  .page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; page-break-after: always; border-bottom: 2px solid #eee; }
+  .page:last-child { page-break-after: auto; border-bottom: none; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #e8b84b; padding-bottom: 6px; margin-bottom: 12px; }
+  .logo-text { font-size: 22px; font-weight: 900; color: #e8b84b; letter-spacing: 3px; }
+  .issue-name { font-size: 15px; font-weight: 700; color: #222; }
+  .date { font-size: 10px; color: #999; }
+  .kpi-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .kpi { flex: 1; background: #f9f6ee; border-top: 3px solid #e8b84b; border-radius: 6px; padding: 8px 6px; text-align: center; }
+  .kpi-label { font-size: 9px; color: #888; margin-bottom: 4px; }
+  .kpi-val { font-size: 20px; font-weight: 900; color: #e8b84b; }
+  .chart-row { display: flex; gap: 12px; margin-bottom: 10px; }
+  .chart-box { border: 1px solid #eee; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
+  .chart-box.full { width: 100%; }
+  .chart-row .chart-box { flex: 1; }
+  .chart-label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; border-left: 3px solid #e8b84b; padding-left: 6px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+${pagesHTML}
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+buildTabs();
+  const remaining = Object.keys(ISSUES);
+  if (remaining.length > 0) {
+    currentIssue = remaining[remaining.length - 1];
+    renderAll();
+  }
+}
+
+// ====== CSV解析 ======
+async function loadIssueFromUrl(issueName, url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    function parseCSVRow(line) {
+      const result = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) throw new Error('データが不足しています');
+
+    const headers = parseCSVRow(lines[0]);
+    const idxGender  = headers.findIndex(h => h.includes('性別'));
+    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
+    const idxAge     = headers.findIndex(h => h.includes('年代'));
+    const idxPurpose = headers.findIndex(h => h.includes('目的'));
+    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
+
+    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
+    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
+
+    dataRows.forEach(row => {
+      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
+      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
+      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
+      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
+      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
+      if (idxGenre >= 0) {
+        row[idxGenre].split(/[,、]/).forEach(g => {
+          const g2 = g.replace(/^"|"$/g,'').trim();
+          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
+        });
+      }
+    });
+
+    ISSUES[issueName] = newData;
+    rebuildTabs();
+    currentIssue = issueName;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.issue === issueName);
+    });
+    renderAll();
+    document.getElementById('sourceNote').textContent =
+      `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
+    return true;
+  } catch(e) {
+    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    return false;
+  }
+}
+
+// ====== タブ再構築 ======
+function rebuildTabs() {
+  const container = document.getElementById('issueTabs');
+  container.innerHTML = '';
+  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
+  ORDER.forEach(issue => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
+    btn.dataset.issue = issue;
+    const hasLive = !!ISSUE_URLS[issue];
+    btn.textContent = issue + (hasLive ? ' 🔴' : '');
+    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
+    btn.onclick = () => selectIssue(issue, btn);
+    container.appendChild(btn);
+  });
+}
+
 // ====== PDF出力 ======
 async function exportPDF() {
   const loadedIssues = Object.keys(ISSUES);
