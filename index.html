@@ -680,7 +680,11 @@ function renderAll() {
 }
 
 // ====== 号ごとURL管理 ======
-const ISSUE_URLS = {};
+const ISSUE_URLS = {
+  "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
+  "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
+  "5月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9Gi34IZW6mHKnFEuSS82_bk2Ch5jzqVZylGv7l3M47HiVthR3il7aSQXXWVH_cqyYsuxBLVewCt-_/pub?gid=171044816&single=true&output=csv"
+};
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
