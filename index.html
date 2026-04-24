@@ -862,6 +862,163 @@ async function exportPDF() {
     alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
     return;
   }
+  const overlay = document.getElementById('pdf-overlay');
+  const msg = document.getElementById('pdf-msg');
+  overlay.classList.add('active');
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const savedIssue = currentIssue;
+    let firstPage = true;
+
+    for (let idx = 0; idx < loadedIssues.length; idx++) {
+      const issue = loadedIssues[idx];
+      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
+      currentIssue = issue;
+      renderAll();
+      await new Promise(r => setTimeout(r, 900));
+
+      const target = document.querySelector('.main');
+      const canvas = await html2canvas(target, {
+        scale: 1.5, useCORS: true, backgroundColor: '#0d0d0d', logging: false,
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgH = (canvas.height / canvas.width) * W;
+
+      if (!firstPage) pdf.addPage();
+      firstPage = false;
+
+      pdf.setFillColor(26, 26, 26);
+      pdf.rect(0, 0, W, 10, 'F');
+      pdf.setFillColor(232, 184, 75);
+      pdf.rect(0, 0, W, 2, 'F');
+      pdf.setTextColor(232, 184, 75);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.text('FREEC', 15, 7.5);
+      pdf.setTextColor(180, 180, 180);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.text('Reader Survey  ' + issue, W / 2, 7.5, { align: 'center' });
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(new Date().toLocaleDateString('ja-JP'), W - 15, 7.5, { align: 'right' });
+
+      const availH = H - 12;
+      const drawH = Math.min(imgH, availH);
+      const drawW = imgH > availH ? W * (availH / imgH) : W;
+      const drawX = (W - drawW) / 2;
+      pdf.addImage(imgData, 'JPEG', drawX, 11, drawW, drawH);
+    }
+
+    currentIssue = savedIssue;
+    renderAll();
+    msg.textContent = 'PDFを保存中...';
+    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
+    pdf.save('FREEC_アンケート集計_' + today + '.pdf');
+  } catch (e) {
+    alert('PDF生成中にエラーが発生しました: ' + e.message);
+    console.error(e);
+  } finally {
+    overlay.classList.remove('active');
+  }
+}
+
+buildTabs();
+  const remaining = Object.keys(ISSUES);
+  if (remaining.length > 0) {
+    currentIssue = remaining[remaining.length - 1];
+    renderAll();
+  }
+}
+
+// ====== CSV解析 ======
+async function loadIssueFromUrl(issueName, url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    function parseCSVRow(line) {
+      const result = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) throw new Error('データが不足しています');
+
+    const headers = parseCSVRow(lines[0]);
+    const idxGender  = headers.findIndex(h => h.includes('性別'));
+    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
+    const idxAge     = headers.findIndex(h => h.includes('年代'));
+    const idxPurpose = headers.findIndex(h => h.includes('目的'));
+    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
+
+    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
+    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
+
+    dataRows.forEach(row => {
+      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
+      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
+      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
+      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
+      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
+      if (idxGenre >= 0) {
+        row[idxGenre].split(/[,、]/).forEach(g => {
+          const g2 = g.replace(/^"|"$/g,'').trim();
+          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
+        });
+      }
+    });
+
+    ISSUES[issueName] = newData;
+    rebuildTabs();
+    currentIssue = issueName;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.issue === issueName);
+    });
+    renderAll();
+    document.getElementById('sourceNote').textContent =
+      `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
+    return true;
+  } catch(e) {
+    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    return false;
+  }
+}
+
+// ====== タブ再構築 ======
+function rebuildTabs() {
+  const container = document.getElementById('issueTabs');
+  container.innerHTML = '';
+  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
+  ORDER.forEach(issue => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
+    btn.dataset.issue = issue;
+    const hasLive = !!ISSUE_URLS[issue];
+    btn.textContent = issue + (hasLive ? ' 🔴' : '');
+    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
+    btn.onclick = () => selectIssue(issue, btn);
+    container.appendChild(btn);
+  });
+}
+
+// ====== PDF出力 ======
+async function exportPDF() {
+  const loadedIssues = Object.keys(ISSUES);
+  if (loadedIssues.length === 0) {
+    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
+    return;
+  }
 
   const overlay = document.getElementById('pdf-overlay');
   const msg = document.getElementById('pdf-msg');
