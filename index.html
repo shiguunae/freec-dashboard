@@ -412,14 +412,8 @@ const ISSUES = {
 };
 
 const PALETTE = {
-  accent: '#e8b84b',
-  red:    '#c0392b',
-  blue:   '#2980b9',
-  green:  '#27ae60',
-  purple: '#8e44ad',
-  orange: '#e67e22',
-  teal:   '#16a085',
-  pink:   '#e91e63',
+  accent: '#e8b84b', red: '#c0392b', blue: '#2980b9', green: '#27ae60',
+  purple: '#8e44ad', orange: '#e67e22', teal: '#16a085', pink: '#e91e63',
 };
 
 const MULTI_COLORS = [
@@ -432,18 +426,22 @@ let charts = {};
 // ====== 号タブ生成 ======
 function buildTabs() {
   const container = document.getElementById('issueTabs');
-  const issues = Object.keys(ISSUES);
-  // 未来の号も追加
+  container.innerHTML = '';
   const allIssues = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
   allIssues.forEach(issue => {
     const btn = document.createElement('button');
     btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.textContent = issue;
-    btn.disabled = !ISSUES[issue];
-    if (!ISSUES[issue]) btn.style.opacity = '0.3';
+    btn.dataset.issue = issue;
+    const hasLive = !!ISSUE_URLS[issue];
+    btn.textContent = issue + (hasLive ? ' 🔴' : '');
+    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
     btn.onclick = () => selectIssue(issue, btn);
     container.appendChild(btn);
   });
+}
+
+function rebuildTabs() {
+  buildTabs();
 }
 
 function selectIssue(issue, btn) {
@@ -458,8 +456,9 @@ function selectIssue(issue, btn) {
 function renderKPI(data) {
   const row = document.getElementById('kpiRow');
   const genderTotal = Object.values(data.gender).reduce((a,b)=>a+b,0);
-  const maleRate = Math.round(data.gender['男性'] / genderTotal * 100);
-  const localRate = Math.round((data.location['札幌市内'] || 0) / Object.values(data.location).reduce((a,b)=>a+b,0) * 100);
+  const maleRate = genderTotal ? Math.round(data.gender['男性'] / genderTotal * 100) : 0;
+  const locTotal = Object.values(data.location).reduce((a,b)=>a+b,0);
+  const localRate = locTotal ? Math.round((data.location['札幌市内'] || 0) / locTotal * 100) : 0;
   const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
   const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0][0];
 
@@ -481,13 +480,9 @@ function pct(value, data) {
   return total > 0 ? Math.round(value / total * 100) : 0;
 }
 
-// ====== グラフ共通設定 ======
 const commonTooltip = {
-  backgroundColor: '#1e1e1e',
-  borderColor: '#333',
-  borderWidth: 1,
-  titleColor: '#e8b84b',
-  bodyColor: '#ccc',
+  backgroundColor: '#1e1e1e', borderColor: '#333', borderWidth: 1,
+  titleColor: '#e8b84b', bodyColor: '#ccc',
   callbacks: {
     label: ctx => {
       const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
@@ -501,33 +496,22 @@ function destroyChart(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
 }
 
-// ====== グラフ描画 ======
 function renderGender(data) {
   destroyChart('gender');
   const labels = Object.keys(data.gender).filter(k => data.gender[k] > 0);
   const values = labels.map(k => data.gender[k]);
   charts.gender = new Chart(document.getElementById('genderChart'), {
     type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data: values, backgroundColor: [PALETTE.blue, PALETTE.pink], borderWidth: 0 }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: [PALETTE.blue, PALETTE.pink], borderWidth: 0 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '55%',
+      responsive: true, maintainAspectRatio: false, cutout: '55%',
       plugins: {
         legend: { labels: { color: '#ccc', font: { family: 'Noto Sans JP', size: 11 }, padding: 12, boxWidth: 12 } },
         tooltip: commonTooltip,
         datalabels: {
-          color: '#fff',
-          font: { family: 'Noto Sans JP', size: 12, weight: 'bold' },
-          formatter: (value, ctx) => {
-            const p = pct(value, ctx.dataset.data);
-            return p > 0 ? `${value}件\n${p}%` : '';
-          },
-          textAlign: 'center',
-          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
+          color: '#fff', font: { family: 'Noto Sans JP', size: 12, weight: 'bold' },
+          formatter: (value, ctx) => { const p = pct(value, ctx.dataset.data); return p > 0 ? `${value}件\n${p}%` : ''; },
+          textAlign: 'center', display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
         }
       }
     }
@@ -541,39 +525,26 @@ function renderLocation(data) {
   const values = entries.map(([,v]) => v);
   charts.location = new Chart(document.getElementById('locationChart'), {
     type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data: values, backgroundColor: [PALETTE.accent, PALETTE.green, PALETTE.orange, PALETTE.purple], borderWidth: 0 }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: [PALETTE.accent, PALETTE.green, PALETTE.orange, PALETTE.purple], borderWidth: 0 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '55%',
+      responsive: true, maintainAspectRatio: false, cutout: '55%',
       plugins: {
         legend: { labels: { color: '#ccc', font: { family: 'Noto Sans JP', size: 11 }, padding: 12, boxWidth: 12 } },
         tooltip: commonTooltip,
         datalabels: {
-          color: '#fff',
-          font: { family: 'Noto Sans JP', size: 11, weight: 'bold' },
-          formatter: (value, ctx) => {
-            const p = pct(value, ctx.dataset.data);
-            return p > 0 ? `${value}件\n${p}%` : '';
-          },
-          textAlign: 'center',
-          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
+          color: '#fff', font: { family: 'Noto Sans JP', size: 11, weight: 'bold' },
+          formatter: (value, ctx) => { const p = pct(value, ctx.dataset.data); return p > 0 ? `${value}件\n${p}%` : ''; },
+          textAlign: 'center', display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
         }
       }
     }
   });
 }
 
-function makeBarDatalabels(values, anchor, align, offsetVal) {
+function makeBarDatalabels() {
   return {
-    color: '#eee',
-    font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
-    anchor: anchor || 'end',
-    align: align || 'end',
-    offset: offsetVal !== undefined ? offsetVal : 4,
+    color: '#eee', font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
+    anchor: 'end', align: 'end', offset: 4,
     formatter: (value, ctx) => {
       if (!value) return '';
       const p = pct(value, ctx.dataset.data);
@@ -590,25 +561,11 @@ function renderAge(data) {
   const maxVal = Math.max(...values);
   charts.age = new Chart(document.getElementById('ageChart'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'),
-        borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]),
-        borderWidth: 1,
-        borderRadius: 6
-      }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'), borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]), borderWidth: 1, borderRadius: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 28 } },
-      plugins: {
-        legend: { display: false },
-        tooltip: commonTooltip,
-        datalabels: makeBarDatalabels(values)
-      },
+      plugins: { legend: { display: false }, tooltip: commonTooltip, datalabels: makeBarDatalabels() },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { display: false } },
         y: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.3) }
@@ -625,37 +582,13 @@ function renderPurpose(data) {
   const maxVal = Math.max(...values);
   charts.purpose = new Chart(document.getElementById('purposeChart'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: PALETTE.teal + 'cc',
-        borderColor: PALETTE.teal,
-        borderWidth: 1,
-        borderRadius: 6
-      }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: PALETTE.teal + 'cc', borderColor: PALETTE.teal, borderWidth: 1, borderRadius: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
       layout: { padding: { right: 90 } },
       plugins: {
-        legend: { display: false },
-        tooltip: commonTooltip,
-        datalabels: {
-          color: '#eee',
-          font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
-          anchor: 'end',
-          align: 'end',
-          offset: 4,
-          formatter: (value, ctx) => {
-            if (!value) return '';
-            const p = pct(value, ctx.dataset.data);
-            return `${value}件 (${p}%)`;
-          },
-          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
-        }
+        legend: { display: false }, tooltip: commonTooltip,
+        datalabels: { color: '#eee', font: { family: 'Noto Sans JP', size: 10, weight: 'bold' }, anchor: 'end', align: 'end', offset: 4, formatter: (value, ctx) => { if (!value) return ''; const p = pct(value, ctx.dataset.data); return `${value}件 (${p}%)`; }, display: ctx => ctx.dataset.data[ctx.dataIndex] > 0 }
       },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 10 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.5) },
@@ -673,25 +606,11 @@ function renderGenre(data) {
   const maxVal = Math.max(...values);
   charts.genre = new Chart(document.getElementById('genreChart'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'),
-        borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]),
-        borderWidth: 1,
-        borderRadius: 6
-      }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'), borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]), borderWidth: 1, borderRadius: 6 }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 30 } },
-      plugins: {
-        legend: { display: false },
-        tooltip: commonTooltip,
-        datalabels: makeBarDatalabels(values)
-      },
+      plugins: { legend: { display: false }, tooltip: commonTooltip, datalabels: makeBarDatalabels() },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { display: false } },
         y: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.3) }
@@ -700,9 +619,9 @@ function renderGenre(data) {
   });
 }
 
-// ====== まとめて描画 ======
 function renderAll() {
   const data = ISSUES[currentIssue];
+  if (!data) return;
   renderKPI(data);
   renderGender(data);
   renderLocation(data);
@@ -833,387 +752,14 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
       `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
     return true;
   } catch(e) {
-    if (!silent) alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    else console.warn(`[自動] ${issueName}: ${e.message}`);
+    if (!silent) {
+      alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    } else {
+      console.warn('[自動] ' + issueName + ': ' + e.message);
+    }
     return false;
   }
 }
-
-// ====== タブ再構築 ======
-function rebuildTabs() {
-  const container = document.getElementById('issueTabs');
-  container.innerHTML = '';
-  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
-  ORDER.forEach(issue => {
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.dataset.issue = issue;
-    const hasLive = !!ISSUE_URLS[issue];
-    btn.textContent = issue + (hasLive ? ' 🔴' : '');
-    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
-    btn.onclick = () => selectIssue(issue, btn);
-    container.appendChild(btn);
-  });
-}
-
-// ====== PDF出力（全画像方式）======
-async function exportPDF() {
-  const loadedIssues = Object.keys(ISSUES);
-  if (loadedIssues.length === 0) {
-    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
-    return;
-  }
-
-  const overlay = document.getElementById('pdf-overlay');
-  const msg = document.getElementById('pdf-msg');
-  overlay.classList.add('active');
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297;
-    const savedIssue = currentIssue;
-    let firstPage = true;
-
-    // ヘッダーとタブを除いた .main 部分だけキャプチャ
-    const target = document.querySelector('.main');
-
-    for (let idx = 0; idx < loadedIssues.length; idx++) {
-      const issue = loadedIssues[idx];
-      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
-
-      currentIssue = issue;
-      renderAll();
-      // settingsPanelを必ず閉じる
-      const panel = document.getElementById('settingsPanel');
-      if (panel) panel.style.display = 'none';
-      // connect-bannerも非表示
-      const banner = document.querySelector('.connect-banner');
-      if (banner) banner.style.display = 'none';
-
-      await new Promise(r => setTimeout(r, 1000));
-
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#0d0d0d',
-        logging: false,
-        windowWidth: 1200,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgAspect = canvas.height / canvas.width;
-      const drawW = W;
-      const drawH = drawW * imgAspect;
-
-      if (!firstPage) pdf.addPage();
-      firstPage = false;
-
-      if (drawH <= H) {
-        // 1ページに収まる
-        pdf.addImage(imgData, 'PNG', 0, 0, drawW, drawH);
-      } else {
-        // 複数ページに分割
-        const pageContentH = H;
-        const totalPages = Math.ceil(drawH / pageContentH);
-        for (let p = 0; p < totalPages; p++) {
-          if (p > 0) pdf.addPage();
-          const srcY = (p * pageContentH / drawH) * canvas.height;
-          const srcH = Math.min((pageContentH / drawH) * canvas.height, canvas.height - srcY);
-          // 部分キャンバス作成
-          const partCanvas = document.createElement('canvas');
-          partCanvas.width = canvas.width;
-          partCanvas.height = srcH;
-          const ctx = partCanvas.getContext('2d');
-          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-          const partImg = partCanvas.toDataURL('image/png');
-          const partH = (srcH / canvas.height) * drawH;
-          pdf.addImage(partImg, 'PNG', 0, 0, drawW, partH);
-        }
-      }
-
-      // banner戻す
-      if (banner) banner.style.display = '';
-    }
-
-    currentIssue = savedIssue;
-    renderAll();
-
-    msg.textContent = 'PDFを保存中...';
-    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
-    pdf.save('FREEC_アンケート集計_' + today + '.pdf');
-
-  } catch (e) {
-    alert('PDF生成中にエラーが発生しました: ' + e.message);
-    console.error(e);
-  } finally {
-    overlay.classList.remove('active');
-  }
-}
-
-  const remaining = Object.keys(ISSUES);
-  if (remaining.length > 0) {
-    currentIssue = remaining[remaining.length - 1];
-    renderAll();
-  }
-}
-
-// ====== CSV解析 ======
-
-// ====== タブ再構築 ======
-
-// ====== PDF出力（印刷方式）======
-function exportPDF() {
-  const loadedIssues = Object.keys(ISSUES);
-  if (loadedIssues.length === 0) {
-    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
-    return;
-  }
-
-  // 印刷用ウィンドウを生成
-  const printWin = window.open('', '_blank');
-
-  // 各号のデータをHTML化
-  function pct(val, total) {
-    return total > 0 ? Math.round(val / total * 100) : 0;
-  }
-
-  let pagesHTML = '';
-
-  loadedIssues.forEach((issue, idx) => {
-    const data = ISSUES[issue];
-    const gt = Object.values(data.gender).reduce((a,b)=>a+b,0);
-    const maleR = pct(data.gender['男性']||0, gt);
-    const lt = Object.values(data.location).reduce((a,b)=>a+b,0);
-    const localR = pct(data.location['札幌市内']||0, lt);
-    const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
-    const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0][0];
-
-    // グラフをcanvasからdataURLで取得（現在表示中の号）
-    // 各号のbar chartを簡易SVGで生成
-    function barSVG(obj, color, maxW=300) {
-      const entries = Object.entries(obj).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-      const maxVal = Math.max(...entries.map(([,v])=>v));
-      const rowH = 24;
-      const svgH = entries.length * rowH + 10;
-      const colors2 = ['#e8b84b','#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e91e63'];
-      let rows = entries.map(([k,v],i) => {
-        const w = Math.round((v / maxVal) * maxW);
-        const p = pct(v, entries.reduce((a,[,b])=>a+b,0));
-        return `<g transform="translate(0,${i*rowH})">
-          <text x="0" y="16" font-size="11" fill="#333" font-family="sans-serif">${k}</text>
-          <rect x="80" y="5" width="${w}" height="14" rx="3" fill="${colors2[i%colors2.length]}"/>
-          <text x="${80+w+5}" y="16" font-size="10" fill="#555" font-family="sans-serif">${v}件(${p}%)</text>
-        </g>`;
-      }).join('');
-      return `<svg width="460" height="${svgH}" xmlns="http://www.w3.org/2000/svg">${rows}</svg>`;
-    }
-
-    function pieSVG(obj, colors2) {
-      const entries = Object.entries(obj).filter(([,v])=>v>0);
-      const total = entries.reduce((a,[,v])=>a+v,0);
-      const cx=90, cy=80, r=65;
-      let startAngle = -Math.PI/2;
-      let slices = '';
-      let legend = '';
-      entries.forEach(([k,v],i) => {
-        const angle = (v/total)*Math.PI*2;
-        const endAngle = startAngle + angle;
-        const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
-        const x2=cx+r*Math.cos(endAngle), y2=cy+r*Math.sin(endAngle);
-        const large = angle > Math.PI ? 1 : 0;
-        const midAngle = startAngle + angle/2;
-        const lx=cx+(r*0.65)*Math.cos(midAngle), ly=cy+(r*0.65)*Math.sin(midAngle);
-        const p = pct(v, total);
-        slices += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${colors2[i%colors2.length]}" stroke="white" stroke-width="2"/>`;
-        if(p > 3) slices += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="white" font-family="sans-serif" font-weight="bold">${p}%</text>`;
-        legend += `<g transform="translate(0,${i*20})"><rect width="12" height="12" rx="2" fill="${colors2[i%colors2.length]}"/><text x="16" y="10" font-size="11" fill="#333" font-family="sans-serif">${k}: ${v}件</text></g>`;
-        startAngle = endAngle;
-      });
-      return `<svg width="320" height="170" xmlns="http://www.w3.org/2000/svg">
-        ${slices}
-        <g transform="translate(185,20)">${legend}</g>
-      </svg>`;
-    }
-
-    const gColors = ['#2980b9','#e91e63','#27ae60','#e67e22'];
-    const lColors = ['#e8b84b','#27ae60','#e67e22','#8e44ad'];
-
-    pagesHTML += `
-    <div class="page">
-      <div class="page-header">
-        <span class="logo-text">FREEC</span>
-        <span class="issue-name">${issue} 集計結果</span>
-        <span class="date">${new Date().toLocaleDateString('ja-JP')}</span>
-      </div>
-
-      <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">総回答数</div><div class="kpi-val">${data.total}件</div></div>
-        <div class="kpi"><div class="kpi-label">男性比率</div><div class="kpi-val">${maleR}%</div></div>
-        <div class="kpi"><div class="kpi-label">女性比率</div><div class="kpi-val">${100-maleR}%</div></div>
-        <div class="kpi"><div class="kpi-label">市内率</div><div class="kpi-val">${localR}%</div></div>
-        <div class="kpi"><div class="kpi-label">最多年代</div><div class="kpi-val">${topAge}</div></div>
-      </div>
-
-      <div class="chart-row">
-        <div class="chart-box">
-          <div class="chart-label">男女比</div>
-          ${pieSVG(data.gender, gColors)}
-        </div>
-        <div class="chart-box">
-          <div class="chart-label">居住地</div>
-          ${pieSVG(data.location, lColors)}
-        </div>
-      </div>
-
-      <div class="chart-box full">
-        <div class="chart-label">年代別</div>
-        ${barSVG(data.age, '#e8b84b')}
-      </div>
-
-      <div class="chart-box full">
-        <div class="chart-label">来訪目的</div>
-        ${barSVG(data.purpose, '#16a085')}
-      </div>
-
-      <div class="chart-box full">
-        <div class="chart-label">よく行くジャンル</div>
-        ${barSVG(data.genre, '#e8b84b')}
-      </div>
-    </div>
-    `;
-  });
-
-  const html = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>FREEC アンケート集計レポート</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fff; color: #222; }
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
-  .page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; page-break-after: always; border-bottom: 2px solid #eee; }
-  .page:last-child { page-break-after: auto; border-bottom: none; }
-  .page-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #e8b84b; padding-bottom: 6px; margin-bottom: 12px; }
-  .logo-text { font-size: 22px; font-weight: 900; color: #e8b84b; letter-spacing: 3px; }
-  .issue-name { font-size: 15px; font-weight: 700; color: #222; }
-  .date { font-size: 10px; color: #999; }
-  .kpi-row { display: flex; gap: 8px; margin-bottom: 14px; }
-  .kpi { flex: 1; background: #f9f6ee; border-top: 3px solid #e8b84b; border-radius: 6px; padding: 8px 6px; text-align: center; }
-  .kpi-label { font-size: 9px; color: #888; margin-bottom: 4px; }
-  .kpi-val { font-size: 20px; font-weight: 900; color: #e8b84b; }
-  .chart-row { display: flex; gap: 12px; margin-bottom: 10px; }
-  .chart-box { border: 1px solid #eee; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
-  .chart-box.full { width: 100%; }
-  .chart-row .chart-box { flex: 1; }
-  .chart-label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; border-left: 3px solid #e8b84b; padding-left: 6px; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { border-bottom: none; }
-  }
-</style>
-</head>
-<body>
-${pagesHTML}
-<script>window.onload = () => { window.print(); }<\/script>
-</body>
-</html>`;
-
-  printWin.document.write(html);
-  printWin.document.close();
-}
-
-  const remaining = Object.keys(ISSUES);
-  if (remaining.length > 0) {
-    currentIssue = remaining[remaining.length - 1];
-    renderAll();
-  }
-}
-
-// ====== CSV解析 ======
-
-// ====== タブ再構築 ======
-
-// ====== PDF出力 ======
-async function exportPDF() {
-  const loadedIssues = Object.keys(ISSUES);
-  if (loadedIssues.length === 0) {
-    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
-    return;
-  }
-  const overlay = document.getElementById('pdf-overlay');
-  const msg = document.getElementById('pdf-msg');
-  overlay.classList.add('active');
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297;
-    const savedIssue = currentIssue;
-    let firstPage = true;
-
-    for (let idx = 0; idx < loadedIssues.length; idx++) {
-      const issue = loadedIssues[idx];
-      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
-      currentIssue = issue;
-      renderAll();
-      await new Promise(r => setTimeout(r, 900));
-
-      const target = document.querySelector('.main');
-      const canvas = await html2canvas(target, {
-        scale: 1.5, useCORS: true, backgroundColor: '#0d0d0d', logging: false,
-      });
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      const imgH = (canvas.height / canvas.width) * W;
-
-      if (!firstPage) pdf.addPage();
-      firstPage = false;
-
-      pdf.setFillColor(26, 26, 26);
-      pdf.rect(0, 0, W, 10, 'F');
-      pdf.setFillColor(232, 184, 75);
-      pdf.rect(0, 0, W, 2, 'F');
-      pdf.setTextColor(232, 184, 75);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      pdf.text('FREEC', 15, 7.5);
-      pdf.setTextColor(180, 180, 180);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.text('Reader Survey  ' + issue, W / 2, 7.5, { align: 'center' });
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(new Date().toLocaleDateString('ja-JP'), W - 15, 7.5, { align: 'right' });
-
-      const availH = H - 12;
-      const drawH = Math.min(imgH, availH);
-      const drawW = imgH > availH ? W * (availH / imgH) : W;
-      const drawX = (W - drawW) / 2;
-      pdf.addImage(imgData, 'JPEG', drawX, 11, drawW, drawH);
-    }
-
-    currentIssue = savedIssue;
-    renderAll();
-    msg.textContent = 'PDFを保存中...';
-    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
-    pdf.save('FREEC_アンケート集計_' + today + '.pdf');
-  } catch (e) {
-    alert('PDF生成中にエラーが発生しました: ' + e.message);
-    console.error(e);
-  } finally {
-    overlay.classList.remove('active');
-  }
-}
-
-  const remaining = Object.keys(ISSUES);
-  if (remaining.length > 0) {
-    currentIssue = remaining[remaining.length - 1];
-    renderAll();
-  }
-}
-
-// ====== CSV解析 ======
-
-// ====== タブ再構築 ======
 
 // ====== PDF出力 ======
 async function exportPDF() {
@@ -1239,7 +785,6 @@ async function exportPDF() {
     msg.textContent = '表紙を作成中...';
     pdf.setFillColor(...dark);
     pdf.rect(0, 0, W, H, 'F');
-
     pdf.setFillColor(...accent);
     pdf.rect(0, 0, W, 4, 'F');
     pdf.rect(0, H - 4, W, 4, 'F');
@@ -1301,91 +846,65 @@ async function exportPDF() {
 
     pdf.setTextColor(120, 120, 120);
     pdf.setFontSize(8);
-    pdf.text(`\u751f\u6210\u65e5\u6642: ${new Date().toLocaleString('ja-JP')}`, W / 2, H - 20, { align: 'center' });
+    pdf.text('\u751f\u6210\u65e5\u6642: ' + new Date().toLocaleString('ja-JP'), W / 2, H - 20, { align: 'center' });
 
-    // ===== 各号ページ =====
+    // ===== 各号ページ（スクリーンショット方式）=====
     const savedIssue = currentIssue;
+    const target = document.querySelector('.main');
 
     for (let idx = 0; idx < loadedIssues.length; idx++) {
       const issue = loadedIssues[idx];
-      msg.textContent = `${issue} のグラフを描画中... (${idx + 1}/${loadedIssues.length})`;
+      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
 
-      // 一時的にその号に切り替えて描画
       currentIssue = issue;
       renderAll();
-      await new Promise(r => setTimeout(r, 600));
+      const panel = document.getElementById('settingsPanel');
+      if (panel) panel.style.display = 'none';
+      const banner = document.querySelector('.connect-banner');
+      if (banner) banner.style.display = 'none';
+
+      await new Promise(r => setTimeout(r, 800));
+
+      const canvas = await html2canvas(target, {
+        scale: 2, useCORS: true, backgroundColor: '#0d0d0d',
+        logging: false, windowWidth: 1200,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgAspect = canvas.height / canvas.width;
+      const drawW = W;
+      const drawH = drawW * imgAspect;
 
       pdf.addPage();
 
-      // ヘッダー
-      pdf.setFillColor(...dark);
-      pdf.rect(0, 0, W, H, 'F');
-      pdf.setFillColor(...accent);
-      pdf.rect(0, 0, W, 12, 'F');
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.text(`FREEC  ${issue}  \u96c6\u8a08\u7d50\u679c`, margin, 8.5);
-
-      // KPI
-      const data = ISSUES[issue];
-      const gt = Object.values(data.gender).reduce((a, b) => a + b, 0);
-      const maleR = gt ? Math.round(data.gender['\u7537\u6027'] / gt * 100) : 0;
-      const lt = Object.values(data.location).reduce((a, b) => a + b, 0);
-      const localR = lt ? Math.round((data.location['\u672d\u5e4c\u5e02\u5185'] || 0) / lt * 100) : 0;
-      const topAge = Object.entries(data.age).sort((a, b) => b[1] - a[1])[0][0];
-      const topPurpose = Object.entries(data.purpose).sort((a, b) => b[1] - a[1])[0][0];
-
-      const kpis = [
-        ['\u7dcf\u56de\u7b54\u6570', `${data.total}\u4ef6`],
-        ['\u7537\u6027\u6bd4\u7387', `${maleR}%`],
-        ['\u5973\u6027\u6bd4\u7387', `${100 - maleR}%`],
-        ['\u5e02\u5185\u7387', `${localR}%`],
-        ['\u6700\u591a\u5e74\u4ee3', topAge],
-      ];
-      const kpiW = (W - margin * 2) / kpis.length;
-      kpis.forEach(([label, val], i) => {
-        const kx = margin + i * kpiW;
-        pdf.setFillColor(35, 35, 35);
-        pdf.roundedRect(kx + 1, 16, kpiW - 2, 20, 2, 2, 'F');
-        pdf.setFillColor(...accent);
-        pdf.rect(kx + 1, 16, kpiW - 2, 1.5, 'F');
-        pdf.setTextColor(140, 140, 140);
-        pdf.setFontSize(7);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(label, kx + kpiW / 2, 22, { align: 'center' });
-        pdf.setTextColor(...accent);
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(val, kx + kpiW / 2, 32, { align: 'center' });
-      });
-
-      // チャートキャプチャ
-      const chartIds = [
-        { id: 'genderChart', x: margin, y: 42, w: 82, h: 55 },
-        { id: 'locationChart', x: margin + 88, y: 42, w: 82, h: 55 },
-        { id: 'ageChart', x: margin, y: 102, w: W - margin * 2, h: 50 },
-        { id: 'purposeChart', x: margin, y: 157, w: W - margin * 2, h: 55 },
-        { id: 'genreChart', x: margin, y: 217, w: W - margin * 2, h: 65 },
-      ];
-
-      for (const { id, x, y, w, h } of chartIds) {
-        const canvas = document.getElementById(id);
-        if (!canvas) continue;
-        const imgData = canvas.toDataURL('image/png');
-        pdf.setFillColor(30, 30, 30);
-        pdf.roundedRect(x, y, w, h, 2, 2, 'F');
-        pdf.addImage(imgData, 'PNG', x + 2, y + 2, w - 4, h - 4);
+      if (drawH <= H) {
+        pdf.addImage(imgData, 'PNG', 0, 0, drawW, drawH);
+      } else {
+        const totalPages = Math.ceil(drawH / H);
+        for (let p = 0; p < totalPages; p++) {
+          if (p > 0) pdf.addPage();
+          const srcY = (p * H / drawH) * canvas.height;
+          const srcH = Math.min((H / drawH) * canvas.height, canvas.height - srcY);
+          const partCanvas = document.createElement('canvas');
+          partCanvas.width = canvas.width;
+          partCanvas.height = srcH;
+          const ctx = partCanvas.getContext('2d');
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+          const partImg = partCanvas.toDataURL('image/png');
+          const partH = (srcH / canvas.height) * drawH;
+          pdf.addImage(partImg, 'PNG', 0, 0, drawW, partH);
+        }
       }
+
+      if (banner) banner.style.display = '';
     }
 
-    // 元の号に戻す
     currentIssue = savedIssue;
     renderAll();
 
     msg.textContent = 'PDFを保存中...';
     const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
-    pdf.save(`FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_${today}.pdf`);
+    pdf.save('FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_' + today + '.pdf');
 
   } catch (e) {
     alert('PDF生成中にエラーが発生しました: ' + e.message);
@@ -1395,7 +914,7 @@ async function exportPDF() {
   }
 }
 
-
+// ====== 起動 ======
 window.addEventListener('load', async () => {
   buildTabs();
   renderAll();
@@ -1407,13 +926,10 @@ window.addEventListener('load', async () => {
 
   // 5分ごとに全登録URLを自動更新
   setInterval(async () => {
-    const entries = Object.entries(ISSUE_URLS);
-    for (const [issue, url] of entries) {
+    for (const [issue, url] of Object.entries(ISSUE_URLS)) {
       await loadIssueFromUrl(issue, url, true);
     }
-    if (entries.length === 0) {
-      document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
-    }
+    document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
   }, 5 * 60 * 1000);
 });
 </script>
