@@ -833,11 +833,8 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
       `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
     return true;
   } catch(e) {
-    if (!silent) {
-      alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    } else {
-      console.warn(`[自動更新] ${issueName} の読み込みをスキップ: ${e.message}`);
-    }
+    if (!silent) alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    else console.warn(`[自動] ${issueName}: ${e.message}`);
     return false;
   }
 }
@@ -954,7 +951,6 @@ async function exportPDF() {
   }
 }
 
-buildTabs();
   const remaining = Object.keys(ISSUES);
   if (remaining.length > 0) {
     currentIssue = remaining[remaining.length - 1];
@@ -965,21 +961,6 @@ buildTabs();
 // ====== CSV解析 ======
 
 // ====== タブ再構築 ======
-function rebuildTabs() {
-  const container = document.getElementById('issueTabs');
-  container.innerHTML = '';
-  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
-  ORDER.forEach(issue => {
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.dataset.issue = issue;
-    const hasLive = !!ISSUE_URLS[issue];
-    btn.textContent = issue + (hasLive ? ' 🔴' : '');
-    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
-    btn.onclick = () => selectIssue(issue, btn);
-    container.appendChild(btn);
-  });
-}
 
 // ====== PDF出力（印刷方式）======
 function exportPDF() {
@@ -1143,7 +1124,6 @@ ${pagesHTML}
   printWin.document.close();
 }
 
-buildTabs();
   const remaining = Object.keys(ISSUES);
   if (remaining.length > 0) {
     currentIssue = remaining[remaining.length - 1];
@@ -1154,21 +1134,6 @@ buildTabs();
 // ====== CSV解析 ======
 
 // ====== タブ再構築 ======
-function rebuildTabs() {
-  const container = document.getElementById('issueTabs');
-  container.innerHTML = '';
-  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
-  ORDER.forEach(issue => {
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.dataset.issue = issue;
-    const hasLive = !!ISSUE_URLS[issue];
-    btn.textContent = issue + (hasLive ? ' 🔴' : '');
-    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
-    btn.onclick = () => selectIssue(issue, btn);
-    container.appendChild(btn);
-  });
-}
 
 // ====== PDF出力 ======
 async function exportPDF() {
@@ -1239,7 +1204,6 @@ async function exportPDF() {
   }
 }
 
-buildTabs();
   const remaining = Object.keys(ISSUES);
   if (remaining.length > 0) {
     currentIssue = remaining[remaining.length - 1];
@@ -1250,21 +1214,6 @@ buildTabs();
 // ====== CSV解析 ======
 
 // ====== タブ再構築 ======
-function rebuildTabs() {
-  const container = document.getElementById('issueTabs');
-  container.innerHTML = '';
-  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
-  ORDER.forEach(issue => {
-    const btn = document.createElement('button');
-    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.dataset.issue = issue;
-    const hasLive = !!ISSUE_URLS[issue];
-    btn.textContent = issue + (hasLive ? ' 🔴' : '');
-    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
-    btn.onclick = () => selectIssue(issue, btn);
-    container.appendChild(btn);
-  });
-}
 
 // ====== PDF出力 ======
 async function exportPDF() {
@@ -1447,26 +1396,26 @@ async function exportPDF() {
 }
 
 
-buildTabs();
-renderAll();
+window.addEventListener('load', async () => {
+  buildTabs();
+  renderAll();
 
-// 起動時に全URLを自動読み込み
-(async () => {
+  // 起動時に全URLを自動読み込み（失敗してもサイレント）
   for (const [issue, url] of Object.entries(ISSUE_URLS)) {
     await loadIssueFromUrl(issue, url, true);
   }
-})();
 
-// 5分ごとに全登録URLを自動更新
-setInterval(async () => {
-  const entries = Object.entries(ISSUE_URLS);
-  for (const [issue, url] of entries) {
-    await loadIssueFromUrl(issue, url, true);
-  }
-  if (entries.length === 0) {
-    document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
-  }
-}, 5 * 60 * 1000);
+  // 5分ごとに全登録URLを自動更新
+  setInterval(async () => {
+    const entries = Object.entries(ISSUE_URLS);
+    for (const [issue, url] of entries) {
+      await loadIssueFromUrl(issue, url, true);
+    }
+    if (entries.length === 0) {
+      document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
+    }
+  }, 5 * 60 * 1000);
+});
 </script>
 </body>
 </html>
