@@ -1,3 +1,18 @@
+もちろんです！修正済みファイルの中身をそのままコピーできるよう表示します。以下が修正済みファイルの全内容です。GitHubのエディタに**全部まるごと**貼り付けてください👇
+
+---
+
+GitHubでの手順：
+1. https://github.com/shiguunae/freec-dashboard を開く
+2. `index.html` をクリック
+3. 右上の**鉛筆アイコン（Edit this file）**をクリック
+4. **Ctrl+A** で全選択 → **Delete** で削除
+5. 以下を**Ctrl+V** で貼り付け
+6. 下の「**Commit changes**」を押す
+
+---
+
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -189,16 +204,6 @@
 
   .chart-wrap.tall { height: 320px; }
 
-  .divider-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 12px 0 4px;
-    border-top: 1px solid var(--border);
-    margin-top: 8px;
-  }
-
   .source-note {
     text-align: center;
     font-size: 11px;
@@ -208,7 +213,6 @@
     margin-top: 8px;
   }
 
-  /* Google連携バナー */
   .connect-banner {
     background: linear-gradient(135deg, #1a1a2e, #16213e);
     border: 1px solid #e8b84b44;
@@ -224,27 +228,6 @@
   .connect-banner .info { flex: 1; }
   .connect-banner .title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
   .connect-banner .desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
-
-  .connect-input {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  .connect-input input {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 12px;
-    color: var(--text);
-    font-size: 12px;
-    width: 320px;
-    outline: none;
-    font-family: 'Noto Sans JP', sans-serif;
-  }
-
-  .connect-input input:focus { border-color: var(--accent); }
 
   .btn {
     background: var(--accent);
@@ -263,7 +246,6 @@
   .btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   .btn.pdf { background: #c0392b; color: #fff; }
 
-  /* PDFオーバーレイ */
   #pdf-overlay {
     display: none;
     position: fixed;
@@ -289,8 +271,6 @@
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
     .connect-banner { flex-direction: column; }
-    .connect-input { width: 100%; }
-    .connect-input input { width: 100%; }
     header { padding: 16px 20px; }
     .main { padding: 20px; }
     .issue-tabs { padding: 16px 20px 0; }
@@ -312,7 +292,6 @@
   </div>
 </header>
 
-<!-- PDFレンダリング中オーバーレイ -->
 <div id="pdf-overlay">
   <div class="spinner"></div>
   <div class="msg" id="pdf-msg">PDFを生成しています...</div>
@@ -391,7 +370,6 @@
 </div>
 
 <script>
-// ====== データ定義 ======
 const ISSUES = {
   '3月号': {
     total: 33,
@@ -423,7 +401,6 @@ const MULTI_COLORS = [
 let currentIssue = '4月号';
 let charts = {};
 
-// ====== 号タブ生成 ======
 function buildTabs() {
   const container = document.getElementById('issueTabs');
   container.innerHTML = '';
@@ -440,9 +417,7 @@ function buildTabs() {
   });
 }
 
-function rebuildTabs() {
-  buildTabs();
-}
+function rebuildTabs() { buildTabs(); }
 
 function selectIssue(issue, btn) {
   if (!ISSUES[issue]) return;
@@ -452,7 +427,6 @@ function selectIssue(issue, btn) {
   renderAll();
 }
 
-// ====== KPI ======
 function renderKPI(data) {
   const row = document.getElementById('kpiRow');
   const genderTotal = Object.values(data.gender).reduce((a,b)=>a+b,0);
@@ -461,7 +435,6 @@ function renderKPI(data) {
   const localRate = locTotal ? Math.round((data.location['札幌市内'] || 0) / locTotal * 100) : 0;
   const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
   const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0][0];
-
   row.innerHTML = `
     <div class="kpi"><div class="kpi-label">総回答数</div><div class="kpi-value">${data.total}</div><div class="kpi-sub">件</div></div>
     <div class="kpi"><div class="kpi-label">男性比率</div><div class="kpi-value">${maleRate}%</div><div class="kpi-sub">女性 ${100-maleRate}%</div></div>
@@ -471,10 +444,8 @@ function renderKPI(data) {
   `;
 }
 
-// datalabelsプラグイン登録
 Chart.register(ChartDataLabels);
 
-// ====== ラベル共通ヘルパー ======
 function pct(value, data) {
   const total = data.reduce((a, b) => a + b, 0);
   return total > 0 ? Math.round(value / total * 100) : 0;
@@ -631,7 +602,6 @@ function renderAll() {
   document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
 }
 
-// ====== 号ごとURL管理 ======
 const ISSUE_URLS = {
   "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
   "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
@@ -694,7 +664,6 @@ function removeIssue(issue) {
   }
 }
 
-// ====== CSV解析 ======
 async function loadIssueFromUrl(issueName, url, silent = false) {
   try {
     const res = await fetch(url);
@@ -761,170 +730,106 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
   }
 }
 
-// ====== PDF出力 ======
 async function exportPDF() {
   const loadedIssues = Object.keys(ISSUES);
   if (loadedIssues.length === 0) {
     alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
     return;
   }
-
   const overlay = document.getElementById('pdf-overlay');
   const msg = document.getElementById('pdf-msg');
   overlay.classList.add('active');
-
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297;
-    const margin = 15;
-    const accent = [232, 184, 75];
-    const dark = [26, 26, 26];
+    const W = 210, H = 297, margin = 15;
+    const accent = [232, 184, 75], dark = [26, 26, 26];
 
-    // ===== 表紙 =====
     msg.textContent = '表紙を作成中...';
-    pdf.setFillColor(...dark);
-    pdf.rect(0, 0, W, H, 'F');
-    pdf.setFillColor(...accent);
-    pdf.rect(0, 0, W, 4, 'F');
-    pdf.rect(0, H - 4, W, 4, 'F');
+    pdf.setFillColor(...dark); pdf.rect(0, 0, W, H, 'F');
+    pdf.setFillColor(...accent); pdf.rect(0, 0, W, 4, 'F'); pdf.rect(0, H-4, W, 4, 'F');
+    pdf.setTextColor(...accent); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(36);
+    pdf.text('FREEC', W/2, 80, { align: 'center' });
+    pdf.setTextColor(200,200,200); pdf.setFontSize(13);
+    pdf.text('Reader Survey Report', W/2, 92, { align: 'center' });
+    pdf.setFillColor(...accent); pdf.rect(margin, 105, W-margin*2, 0.5, 'F');
+    pdf.setTextColor(240,240,240); pdf.setFontSize(16);
+    pdf.text('\u8aad\u8005\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08\u30ec\u30dd\u30fc\u30c8', W/2, 118, { align: 'center' });
+    pdf.setFontSize(12); pdf.setTextColor(180,180,180);
+    pdf.text(loadedIssues.join(' \u30fb '), W/2, 130, { align: 'center' });
 
-    pdf.setTextColor(...accent);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(36);
-    pdf.text('FREEC', W / 2, 80, { align: 'center' });
-
-    pdf.setTextColor(200, 200, 200);
-    pdf.setFontSize(13);
-    pdf.text('Reader Survey Report', W / 2, 92, { align: 'center' });
-
-    pdf.setFillColor(...accent);
-    pdf.rect(margin, 105, W - margin * 2, 0.5, 'F');
-
-    pdf.setTextColor(240, 240, 240);
-    pdf.setFontSize(16);
-    pdf.text('\u8aad\u8005\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08\u30ec\u30dd\u30fc\u30c8', W / 2, 118, { align: 'center' });
-
-    const issueLabel = loadedIssues.join(' \u30fb ');
-    pdf.setFontSize(12);
-    pdf.setTextColor(180, 180, 180);
-    pdf.text(issueLabel, W / 2, 130, { align: 'center' });
-
-    // サマリーテーブル
     const tableTop = 150;
-    const cols = ['\u53f7', '\u7dcf\u56de\u7b54\u6570', '\u7537\u6027\u6bd4\u7387', '\u5973\u6027\u6bd4\u7387', '\u5e02\u5185\u7387', '\u6700\u591a\u5e74\u4ee3'];
-    const colWidths = [20, 30, 28, 28, 28, 28];
+    const cols = ['\u53f7','\u7dcf\u56de\u7b54\u6570','\u7537\u6027\u6bd4\u7387','\u5973\u6027\u6bd4\u7387','\u5e02\u5185\u7387','\u6700\u591a\u5e74\u4ee3'];
+    const colWidths = [20,30,28,28,28,28];
     let cx = margin;
-    pdf.setFillColor(...accent);
-    pdf.rect(margin, tableTop, W - margin * 2, 9, 'F');
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(9);
-    cols.forEach((col, i) => {
-      pdf.text(col, cx + colWidths[i] / 2, tableTop + 6, { align: 'center' });
-      cx += colWidths[i];
-    });
-
+    pdf.setFillColor(...accent); pdf.rect(margin, tableTop, W-margin*2, 9, 'F');
+    pdf.setTextColor(0,0,0); pdf.setFontSize(9);
+    cols.forEach((col, i) => { pdf.text(col, cx+colWidths[i]/2, tableTop+6, { align: 'center' }); cx += colWidths[i]; });
     loadedIssues.forEach((issue, ri) => {
       const data = ISSUES[issue];
-      const gt = Object.values(data.gender).reduce((a, b) => a + b, 0);
-      const maleR = gt ? Math.round(data.gender['\u7537\u6027'] / gt * 100) : 0;
-      const lt = Object.values(data.location).reduce((a, b) => a + b, 0);
-      const localR = lt ? Math.round((data.location['\u672d\u5e4c\u5e02\u5185'] || 0) / lt * 100) : 0;
-      const topAge = Object.entries(data.age).sort((a, b) => b[1] - a[1])[0][0];
-      const rowVals = [issue, `${data.total}\u4ef6`, `${maleR}%`, `${100 - maleR}%`, `${localR}%`, topAge];
-      const rowY = tableTop + 9 + ri * 10;
-      pdf.setFillColor(ri % 2 === 0 ? 40 : 50, ri % 2 === 0 ? 40 : 50, ri % 2 === 0 ? 40 : 50);
-      pdf.rect(margin, rowY, W - margin * 2, 10, 'F');
-      cx = margin;
-      pdf.setTextColor(220, 220, 220);
-      pdf.setFontSize(9);
-      rowVals.forEach((val, i) => {
-        pdf.text(val, cx + colWidths[i] / 2, rowY + 6.5, { align: 'center' });
-        cx += colWidths[i];
-      });
+      const gt = Object.values(data.gender).reduce((a,b)=>a+b,0);
+      const maleR = gt ? Math.round(data.gender['\u7537\u6027']/gt*100) : 0;
+      const lt = Object.values(data.location).reduce((a,b)=>a+b,0);
+      const localR = lt ? Math.round((data.location['\u672d\u5e4c\u5e02\u5185']||0)/lt*100) : 0;
+      const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
+      const rowVals = [issue, `${data.total}\u4ef6`, `${maleR}%`, `${100-maleR}%`, `${localR}%`, topAge];
+      const rowY = tableTop+9+ri*10;
+      pdf.setFillColor(ri%2===0?40:50, ri%2===0?40:50, ri%2===0?40:50);
+      pdf.rect(margin, rowY, W-margin*2, 10, 'F');
+      cx = margin; pdf.setTextColor(220,220,220); pdf.setFontSize(9);
+      rowVals.forEach((val, i) => { pdf.text(val, cx+colWidths[i]/2, rowY+6.5, { align: 'center' }); cx += colWidths[i]; });
     });
+    pdf.setTextColor(120,120,120); pdf.setFontSize(8);
+    pdf.text('\u751f\u6210\u65e5\u6642: '+new Date().toLocaleString('ja-JP'), W/2, H-20, { align: 'center' });
 
-    pdf.setTextColor(120, 120, 120);
-    pdf.setFontSize(8);
-    pdf.text('\u751f\u6210\u65e5\u6642: ' + new Date().toLocaleString('ja-JP'), W / 2, H - 20, { align: 'center' });
-
-    // ===== 各号ページ（スクリーンショット方式）=====
     const savedIssue = currentIssue;
     const target = document.querySelector('.main');
-
     for (let idx = 0; idx < loadedIssues.length; idx++) {
       const issue = loadedIssues[idx];
-      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
-
-      currentIssue = issue;
-      renderAll();
+      msg.textContent = issue+' をキャプチャ中... ('+(idx+1)+'/'+loadedIssues.length+')';
+      currentIssue = issue; renderAll();
       const panel = document.getElementById('settingsPanel');
       if (panel) panel.style.display = 'none';
       const banner = document.querySelector('.connect-banner');
       if (banner) banner.style.display = 'none';
-
       await new Promise(r => setTimeout(r, 800));
-
-      const canvas = await html2canvas(target, {
-        scale: 2, useCORS: true, backgroundColor: '#0d0d0d',
-        logging: false, windowWidth: 1200,
-      });
-
+      const canvas = await html2canvas(target, { scale:2, useCORS:true, backgroundColor:'#0d0d0d', logging:false, windowWidth:1200 });
       const imgData = canvas.toDataURL('image/png');
-      const imgAspect = canvas.height / canvas.width;
-      const drawW = W;
-      const drawH = drawW * imgAspect;
-
+      const drawH = W * canvas.height / canvas.width;
       pdf.addPage();
-
       if (drawH <= H) {
-        pdf.addImage(imgData, 'PNG', 0, 0, drawW, drawH);
+        pdf.addImage(imgData, 'PNG', 0, 0, W, drawH);
       } else {
-        const totalPages = Math.ceil(drawH / H);
-        for (let p = 0; p < totalPages; p++) {
+        const pages = Math.ceil(drawH / H);
+        for (let p = 0; p < pages; p++) {
           if (p > 0) pdf.addPage();
-          const srcY = (p * H / drawH) * canvas.height;
-          const srcH = Math.min((H / drawH) * canvas.height, canvas.height - srcY);
-          const partCanvas = document.createElement('canvas');
-          partCanvas.width = canvas.width;
-          partCanvas.height = srcH;
-          const ctx = partCanvas.getContext('2d');
-          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-          const partImg = partCanvas.toDataURL('image/png');
-          const partH = (srcH / canvas.height) * drawH;
-          pdf.addImage(partImg, 'PNG', 0, 0, drawW, partH);
+          const srcY = (p*H/drawH)*canvas.height;
+          const srcH = Math.min((H/drawH)*canvas.height, canvas.height-srcY);
+          const pc = document.createElement('canvas');
+          pc.width = canvas.width; pc.height = srcH;
+          pc.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+          pdf.addImage(pc.toDataURL('image/png'), 'PNG', 0, 0, W, (srcH/canvas.height)*drawH);
         }
       }
-
       if (banner) banner.style.display = '';
     }
-
-    currentIssue = savedIssue;
-    renderAll();
-
+    currentIssue = savedIssue; renderAll();
     msg.textContent = 'PDFを保存中...';
-    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
-    pdf.save('FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_' + today + '.pdf');
-
-  } catch (e) {
-    alert('PDF生成中にエラーが発生しました: ' + e.message);
+    pdf.save('FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_'+new Date().toLocaleDateString('ja-JP').replace(/\//g,'-')+'.pdf');
+  } catch(e) {
+    alert('PDF生成中にエラーが発生しました: '+e.message);
     console.error(e);
   } finally {
     overlay.classList.remove('active');
   }
 }
 
-// ====== 起動 ======
 window.addEventListener('load', async () => {
   buildTabs();
   renderAll();
-
-  // 起動時に全URLを自動読み込み（失敗してもサイレント）
   for (const [issue, url] of Object.entries(ISSUE_URLS)) {
     await loadIssueFromUrl(issue, url, true);
   }
-
-  // 5分ごとに全登録URLを自動更新
   setInterval(async () => {
     for (const [issue, url] of Object.entries(ISSUE_URLS)) {
       await loadIssueFromUrl(issue, url, true);
@@ -935,3 +840,4 @@ window.addEventListener('load', async () => {
 </script>
 </body>
 </html>
+
