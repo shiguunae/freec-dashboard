@@ -776,7 +776,7 @@ function removeIssue(issue) {
 }
 
 // ====== CSV解析 ======
-async function loadIssueFromUrl(issueName, url) {
+async function loadIssueFromUrl(issueName, url, silent = false) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -833,7 +833,11 @@ async function loadIssueFromUrl(issueName, url) {
       `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
     return true;
   } catch(e) {
-    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    if (!silent) {
+      alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
+    } else {
+      console.warn(`[自動更新] ${issueName} の読み込みをスキップ: ${e.message}`);
+    }
     return false;
   }
 }
@@ -959,67 +963,6 @@ buildTabs();
 }
 
 // ====== CSV解析 ======
-async function loadIssueFromUrl(issueName, url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-
-    function parseCSVRow(line) {
-      const result = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else { cur += c; }
-      }
-      result.push(cur.trim());
-      return result;
-    }
-
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('データが不足しています');
-
-    const headers = parseCSVRow(lines[0]);
-    const idxGender  = headers.findIndex(h => h.includes('性別'));
-    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
-    const idxAge     = headers.findIndex(h => h.includes('年代'));
-    const idxPurpose = headers.findIndex(h => h.includes('目的'));
-    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
-
-    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
-    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
-
-    dataRows.forEach(row => {
-      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
-      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
-      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
-      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
-      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
-      if (idxGenre >= 0) {
-        row[idxGenre].split(/[,、]/).forEach(g => {
-          const g2 = g.replace(/^"|"$/g,'').trim();
-          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
-        });
-      }
-    });
-
-    ISSUES[issueName] = newData;
-    rebuildTabs();
-    currentIssue = issueName;
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.issue === issueName);
-    });
-    renderAll();
-    document.getElementById('sourceNote').textContent =
-      `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
-    return true;
-  } catch(e) {
-    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    return false;
-  }
-}
 
 // ====== タブ再構築 ======
 function rebuildTabs() {
@@ -1209,67 +1152,6 @@ buildTabs();
 }
 
 // ====== CSV解析 ======
-async function loadIssueFromUrl(issueName, url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-
-    function parseCSVRow(line) {
-      const result = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else { cur += c; }
-      }
-      result.push(cur.trim());
-      return result;
-    }
-
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('データが不足しています');
-
-    const headers = parseCSVRow(lines[0]);
-    const idxGender  = headers.findIndex(h => h.includes('性別'));
-    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
-    const idxAge     = headers.findIndex(h => h.includes('年代'));
-    const idxPurpose = headers.findIndex(h => h.includes('目的'));
-    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
-
-    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
-    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
-
-    dataRows.forEach(row => {
-      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
-      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
-      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
-      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
-      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
-      if (idxGenre >= 0) {
-        row[idxGenre].split(/[,、]/).forEach(g => {
-          const g2 = g.replace(/^"|"$/g,'').trim();
-          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
-        });
-      }
-    });
-
-    ISSUES[issueName] = newData;
-    rebuildTabs();
-    currentIssue = issueName;
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.issue === issueName);
-    });
-    renderAll();
-    document.getElementById('sourceNote').textContent =
-      `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
-    return true;
-  } catch(e) {
-    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    return false;
-  }
-}
 
 // ====== タブ再構築 ======
 function rebuildTabs() {
@@ -1366,67 +1248,6 @@ buildTabs();
 }
 
 // ====== CSV解析 ======
-async function loadIssueFromUrl(issueName, url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-
-    function parseCSVRow(line) {
-      const result = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else { cur += c; }
-      }
-      result.push(cur.trim());
-      return result;
-    }
-
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('データが不足しています');
-
-    const headers = parseCSVRow(lines[0]);
-    const idxGender  = headers.findIndex(h => h.includes('性別'));
-    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
-    const idxAge     = headers.findIndex(h => h.includes('年代'));
-    const idxPurpose = headers.findIndex(h => h.includes('目的'));
-    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
-
-    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
-    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
-
-    dataRows.forEach(row => {
-      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
-      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
-      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
-      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
-      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
-      if (idxGenre >= 0) {
-        row[idxGenre].split(/[,、]/).forEach(g => {
-          const g2 = g.replace(/^"|"$/g,'').trim();
-          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
-        });
-      }
-    });
-
-    ISSUES[issueName] = newData;
-    rebuildTabs();
-    currentIssue = issueName;
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.issue === issueName);
-    });
-    renderAll();
-    document.getElementById('sourceNote').textContent =
-      `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
-    return true;
-  } catch(e) {
-    alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    return false;
-  }
-}
 
 // ====== タブ再構築 ======
 function rebuildTabs() {
@@ -1632,7 +1453,7 @@ renderAll();
 // 起動時に全URLを自動読み込み
 (async () => {
   for (const [issue, url] of Object.entries(ISSUE_URLS)) {
-    await loadIssueFromUrl(issue, url);
+    await loadIssueFromUrl(issue, url, true);
   }
 })();
 
@@ -1640,7 +1461,7 @@ renderAll();
 setInterval(async () => {
   const entries = Object.entries(ISSUE_URLS);
   for (const [issue, url] of entries) {
-    await loadIssueFromUrl(issue, url);
+    await loadIssueFromUrl(issue, url, true);
   }
   if (entries.length === 0) {
     document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
