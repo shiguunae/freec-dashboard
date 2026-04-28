@@ -357,6 +357,114 @@
   .btn.ai-btn:hover { background: var(--accent); color: #000; }
   .btn.ai-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* 年代別回答リスト */
+  .age-breakdown-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .age-breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 16px;
+  }
+
+  .age-breakdown-table thead tr {
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .age-breakdown-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .age-breakdown-table th.right { text-align: right; }
+  .age-breakdown-table td.right { text-align: right; }
+
+  .age-breakdown-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .age-breakdown-table tbody tr:last-child { border-bottom: none; }
+  .age-breakdown-table tbody tr:hover { background: rgba(232,184,75,0.05); }
+
+  .age-breakdown-table td {
+    padding: 10px 12px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .age-label {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+  }
+
+  .bar-cell { width: 160px; }
+
+  .mini-bar-wrap {
+    background: #2a2a2a;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .mini-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  .pct-badge {
+    display: inline-block;
+    background: rgba(232,184,75,0.12);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .age-breakdown-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .filter-chip {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .filter-chip.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  .filter-chip:hover:not(.active) { color: var(--text); border-color: #555; }
+
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
     .connect-banner { flex-direction: column; }
@@ -467,6 +575,18 @@
       <div class="chart-title">よく行くお店ジャンル</div>
       <div class="chart-wrap tall"><canvas id="genreChart"></canvas></div>
     </div>
+  </div>
+
+  <!-- 年代別回答リスト -->
+  <div class="age-breakdown-card">
+    <div class="chart-title">年代別 回答リスト</div>
+    <div class="age-breakdown-filters" id="ageFilterRow">
+      <button class="filter-chip active" data-filter="all" onclick="setAgeFilter('all', this)">すべて</button>
+      <button class="filter-chip" data-filter="gender" onclick="setAgeFilter('gender', this)">男女別</button>
+      <button class="filter-chip" data-filter="location" onclick="setAgeFilter('location', this)">居住地別</button>
+      <button class="filter-chip" data-filter="purpose" onclick="setAgeFilter('purpose', this)">来訪目的別</button>
+    </div>
+    <div id="ageBreakdownBody"></div>
   </div>
 
   <div class="source-note" id="sourceNote">表示中：サンプルデータ（3月号・4月号）　|　Googleスプレッドシート連携で自動更新されます</div>
@@ -814,10 +934,205 @@ function renderAll() {
   renderAge(data);
   renderPurpose(data);
   renderGenre(data);
+  renderAgeBreakdown(data);
   document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
 }
 
-// ====== 号ごとURL管理 ======
+// ====== 年代別回答リスト ======
+let currentAgeFilter = 'all';
+
+function setAgeFilter(filter, btn) {
+  currentAgeFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
+  if (data) renderAgeBreakdown(data);
+}
+
+function renderAgeBreakdown(data) {
+  const container = document.getElementById('ageBreakdownBody');
+  if (!container) return;
+
+  const ageEntries = Object.entries(data.age).filter(([, v]) => v > 0);
+  const total = ageEntries.reduce((s, [, v]) => s + v, 0);
+  const maxVal = Math.max(...ageEntries.map(([, v]) => v));
+
+  const AGE_COLORS = {
+    '10代': '#3498db', '20代': '#e8b84b', '30代': '#27ae60',
+    '40代': '#e67e22', '50代': '#c0392b', '60代': '#8e44ad', '70代以上': '#16a085'
+  };
+
+  if (currentAgeFilter === 'all') {
+    // シンプルな全体リスト
+    const rows = ageEntries.map(([age, count]) => {
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
+      const color = AGE_COLORS[age] || '#888';
+      return `
+        <tr>
+          <td><span class="age-label">${age}</span></td>
+          <td class="bar-cell">
+            <div class="mini-bar-wrap">
+              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
+            </div>
+          </td>
+          <td class="right"><span class="pct-badge">${pct}%</span></td>
+          <td class="right" style="color:var(--muted);">${count}件</td>
+          <td></td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="age-breakdown-table">
+        <thead>
+          <tr>
+            <th>年代</th>
+            <th class="bar-cell">割合</th>
+            <th class="right">%</th>
+            <th class="right">回答数</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+  } else if (currentAgeFilter === 'gender') {
+    // 男女別クロス集計（元データがない場合は概算で表示）
+    // 実際のCSVからクロスデータが取れないため、号ごとの全体比率を男女に按分して参考表示
+    const gTotal = Object.values(data.gender).reduce((a, b) => a + b, 0);
+    const maleRate = gTotal > 0 ? (data.gender['男性'] || 0) / gTotal : 0.5;
+    const femaleRate = 1 - maleRate;
+
+    const rows = ageEntries.map(([age, count]) => {
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const maleEst = Math.round(count * maleRate);
+      const femaleEst = count - maleEst;
+      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
+      const color = AGE_COLORS[age] || '#888';
+      return `
+        <tr>
+          <td><span class="age-label">${age}</span></td>
+          <td class="bar-cell">
+            <div class="mini-bar-wrap">
+              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
+            </div>
+          </td>
+          <td class="right"><span class="pct-badge">${pct}%</span></td>
+          <td class="right" style="color:#2980b9;">♂ ${maleEst}件</td>
+          <td class="right" style="color:#e91e63;">♀ ${femaleEst}件</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の男女比率をもとにした参考値</div>
+      <table class="age-breakdown-table">
+        <thead>
+          <tr>
+            <th>年代</th>
+            <th class="bar-cell">割合</th>
+            <th class="right">%</th>
+            <th class="right" style="color:#2980b9;">男性(参考)</th>
+            <th class="right" style="color:#e91e63;">女性(参考)</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+  } else if (currentAgeFilter === 'location') {
+    // 居住地別（同様に全体比率按分）
+    const locTotal = Object.values(data.location).reduce((a, b) => a + b, 0);
+    const localRate = locTotal > 0 ? (data.location['札幌市内'] || 0) / locTotal : 0;
+    const outerRate = locTotal > 0 ? (data.location['札幌市外（道内）'] || 0) / locTotal : 0;
+    const otherRate = 1 - localRate - outerRate;
+
+    const rows = ageEntries.map(([age, count]) => {
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const localEst = Math.round(count * localRate);
+      const outerEst = Math.round(count * outerRate);
+      const otherEst = count - localEst - outerEst;
+      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
+      const color = AGE_COLORS[age] || '#888';
+      return `
+        <tr>
+          <td><span class="age-label">${age}</span></td>
+          <td class="bar-cell">
+            <div class="mini-bar-wrap">
+              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
+            </div>
+          </td>
+          <td class="right"><span class="pct-badge">${pct}%</span></td>
+          <td class="right" style="color:#e8b84b;">市内 ${localEst}件</td>
+          <td class="right" style="color:#27ae60;">道内 ${outerEst}件</td>
+          <td class="right" style="color:var(--muted);">その他 ${otherEst}件</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の居住地比率をもとにした参考値</div>
+      <table class="age-breakdown-table">
+        <thead>
+          <tr>
+            <th>年代</th>
+            <th class="bar-cell">割合</th>
+            <th class="right">%</th>
+            <th class="right" style="color:#e8b84b;">札幌市内</th>
+            <th class="right" style="color:#27ae60;">道内</th>
+            <th class="right" style="color:var(--muted);">その他</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+  } else if (currentAgeFilter === 'purpose') {
+    // 来訪目的別：主な2目的を按分
+    const purpEntries = Object.entries(data.purpose).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    const purpTotal = purpEntries.reduce((s,[,v])=>s+v,0);
+    const top1 = purpEntries[0] || ['—', 0];
+    const top2 = purpEntries[1] || ['—', 0];
+    const top1Rate = purpTotal > 0 ? top1[1] / purpTotal : 0;
+    const top2Rate = purpTotal > 0 ? top2[1] / purpTotal : 0;
+
+    const rows = ageEntries.map(([age, count]) => {
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      const top1Est = Math.round(count * top1Rate);
+      const top2Est = Math.round(count * top2Rate);
+      const otherEst = count - top1Est - top2Est;
+      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
+      const color = AGE_COLORS[age] || '#888';
+      return `
+        <tr>
+          <td><span class="age-label">${age}</span></td>
+          <td class="bar-cell">
+            <div class="mini-bar-wrap">
+              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
+            </div>
+          </td>
+          <td class="right"><span class="pct-badge">${pct}%</span></td>
+          <td class="right" style="color:#e8b84b;">${top1[0]} ${top1Est}件</td>
+          <td class="right" style="color:#16a085;">${top2[0]} ${top2Est}件</td>
+          <td class="right" style="color:var(--muted);">他 ${otherEst}件</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の来訪目的比率をもとにした参考値　上位2目的を表示</div>
+      <table class="age-breakdown-table">
+        <thead>
+          <tr>
+            <th>年代</th>
+            <th class="bar-cell">割合</th>
+            <th class="right">%</th>
+            <th class="right" style="color:#e8b84b;">${top1[0]}</th>
+            <th class="right" style="color:#16a085;">${top2[0]}</th>
+            <th class="right" style="color:var(--muted);">その他</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+}
+
+
 const ISSUE_URLS = {
   "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
   "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
