@@ -599,7 +599,7 @@ async function runAiAnalysis() {
   const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
   const topGenres = Object.entries(data.genre).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}(${v}件)`).join('、');
 
-  const prompt = `あなたはフリーペーパーのマーケティングアナリストです。以下はすすきのエリアのフリーペーパー「FREEC」の読者アンケート集計データ（${issueLabel}）です。
+  const promptText = `あなたはフリーペーパーのマーケティングアナリストです。以下はすすきのエリアのフリーペーパー「FREEC」の読者アンケート集計データ（${issueLabel}）です。
 
 - 総回答数: ${data.total}件
 - 男女比: 男性${maleR}% / 女性${100-maleR}%
@@ -613,7 +613,7 @@ async function runAiAnalysis() {
   // APIキーをlocalStorageから取得（未設定の場合は入力ダイアログを表示）
   let apiKey = localStorage.getItem('anthropic_api_key') || '';
   if (!apiKey) {
-    apiKey = prompt('Anthropic APIキーを入力してください（sk-ant-...）\n※入力後はブラウザに保存されます。外部に送信されることはありません。');
+    apiKey = window.prompt('Anthropic APIキーを入力してください（sk-ant-...）\n※入力後はブラウザに保存されます。外部に送信されることはありません。');
     if (!apiKey) {
       body.className = 'ai-insight-body';
       body.textContent = '⚠️ APIキーが未入力のため、AI解説を生成できません。';
@@ -635,7 +635,7 @@ async function runAiAnalysis() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content: promptText }]
       })
     });
     if (!response.ok) {
