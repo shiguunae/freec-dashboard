@@ -435,7 +435,6 @@
       <div class="ai-insight-title">✦ AI グラフ解説</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn ai-btn" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🤖 解説を生成</button>
-        <button class="btn secondary" style="font-size:10px;padding:5px 10px;" onclick="resetApiKey()" title="APIキーを再設定">🔑 キー変更</button>
       </div>
     </div>
     <div class="ai-insight-body" id="aiInsightBody">「解説を生成」ボタンを押すと、現在表示中のデータをAIが分析してわかりやすく解説します。</div>
@@ -570,22 +569,12 @@ function calcTotalData() {
   return merged;
 }
 
-// ====== APIキーリセット ======
-function resetApiKey() {
-  localStorage.removeItem('anthropic_api_key');
-  alert('APIキーをリセットしました。次回「解説を生成」ボタンを押すと再入力できます。');
-}
-
-// ====== AI グラフ解説 ======
-async function runAiAnalysis() {
+// ====== AI グラフ解説（Claude.ai連携方式） ======
+function runAiAnalysis() {
   const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
   if (!data) return;
 
-  const btn = document.getElementById('aiAnalyzeBtn');
   const body = document.getElementById('aiInsightBody');
-  btn.disabled = true;
-  body.className = 'ai-insight-body loading';
-  body.innerHTML = '<div class="ai-spinner"></div>AIが分析中です...';
 
   const issueLabel = currentIssue === '__total__'
     ? `全${Object.keys(ISSUES).length}号合計`
@@ -598,65 +587,46 @@ async function runAiAnalysis() {
   const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
   const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
   const topGenres = Object.entries(data.genre).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}(${v}件)`).join('、');
+  const ageDetail = Object.entries(data.age).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
+  const purposeDetail = Object.entries(data.purpose).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
+  const genreDetail = Object.entries(data.genre).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
 
   const promptText = `あなたはフリーペーパーのマーケティングアナリストです。以下はすすきのエリアのフリーペーパー「FREEC」の読者アンケート集計データ（${issueLabel}）です。
 
+【基本データ】
 - 総回答数: ${data.total}件
 - 男女比: 男性${maleR}% / 女性${100-maleR}%
 - 居住地: 札幌市内${localR}%、その他${100-localR}%
-- 最多年代: ${topAge}
-- 主な来訪目的: ${topPurpose}
-- 人気ジャンルTOP3: ${topGenres}
+
+【年代内訳】${ageDetail}
+【来訪目的】${purposeDetail}
+【よく行くジャンル】${genreDetail}
 
 このデータから読み取れる読者層の特徴、注目すべきポイント、広告出稿や編集方針へのヒントを、3〜4文の日本語で簡潔にわかりやすく解説してください。マーケティング担当者が即座に活用できるような、具体的で前向きなコメントをお願いします。`;
 
-  // APIキーをlocalStorageから取得（未設定の場合は入力ダイアログを表示）
-  let apiKey = localStorage.getItem('anthropic_api_key') || '';
-  if (!apiKey) {
-    apiKey = window.prompt('Anthropic APIキーを入力してください（sk-ant-...）\n※入力後はブラウザに保存されます。外部に送信されることはありません。');
-    if (!apiKey) {
-      body.className = 'ai-insight-body';
-      body.textContent = '⚠️ APIキーが未入力のため、AI解説を生成できません。';
-      btn.disabled = false;
-      return;
-    }
-    localStorage.setItem('anthropic_api_key', apiKey.trim());
-  }
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: promptText }]
-      })
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      // APIキーが無効な場合はlocalStorageから削除して再入力を促す
-      if (response.status === 401) {
-        localStorage.removeItem('anthropic_api_key');
-        throw new Error('APIキーが無効です。次回実行時に再入力してください。');
-      }
-      throw new Error(err.error?.message || `HTTPエラー: ${response.status}`);
-    }
-    const result = await response.json();
-    const text = result.content?.map(c => c.text || '').join('') || '解説を取得できませんでした。';
+  // クリップボードにコピー
+  navigator.clipboard.writeText(promptText).then(() => {
     body.className = 'ai-insight-body';
-    body.textContent = text;
-  } catch(e) {
+    body.innerHTML = `
+      <div style="background:#1a2a1a;border:1px solid #27ae6066;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+        <div style="color:#27ae60;font-weight:700;margin-bottom:6px;">✅ 分析プロンプトをコピーしました！</div>
+        <div style="color:#aaa;font-size:12px;line-height:1.7;">
+          ① 下の「Claude.aiで解析する」ボタンを押してください<br>
+          ② Claude.aiが開いたら、入力欄に <strong style="color:#e8b84b;">Ctrl+V（貼り付け）</strong> してEnterを押すだけです<br>
+          ③ AIの解説が表示されたら、この欄にコピペしてご利用ください
+        </div>
+      </div>
+      <a href="https://claude.ai/new" target="_blank" style="display:inline-block;background:#e8b84b;color:#000;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none;">🤖 Claude.aiで解析する →</a>
+    `;
+  }).catch(() => {
+    // クリップボードAPIが使えない場合はテキストエリアで表示
     body.className = 'ai-insight-body';
-    body.textContent = '⚠️ AI解説の取得に失敗しました。' + (e.message ? `（${e.message}）` : 'しばらく待ってから再度お試しください。');
-  } finally {
-    btn.disabled = false;
-  }
+    body.innerHTML = `
+      <div style="color:#e8b84b;font-weight:700;margin-bottom:8px;">📋 以下のテキストをコピーしてClaude.aiに貼り付けてください</div>
+      <textarea readonly style="width:100%;height:120px;background:#111;border:1px solid #333;border-radius:6px;color:#ccc;font-size:11px;padding:8px;resize:none;font-family:'Noto Sans JP',sans-serif;" onclick="this.select()">${promptText}</textarea>
+      <a href="https://claude.ai/new" target="_blank" style="display:inline-block;margin-top:10px;background:#e8b84b;color:#000;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none;">🤖 Claude.aiで解析する →</a>
+    `;
+  });
 }
 
 // ====== KPI ======
