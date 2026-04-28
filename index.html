@@ -433,7 +433,10 @@
   <div class="ai-insight-card" id="aiInsightCard">
     <div class="ai-insight-header">
       <div class="ai-insight-title">✦ AI グラフ解説</div>
-      <button class="btn ai-btn" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🤖 解説を生成</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn ai-btn" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🤖 解説を生成</button>
+        <button class="btn secondary" style="font-size:10px;padding:5px 10px;" onclick="resetApiKey()" title="APIキーを再設定">🔑 キー変更</button>
+      </div>
     </div>
     <div class="ai-insight-body" id="aiInsightBody">「解説を生成」ボタンを押すと、現在表示中のデータをAIが分析してわかりやすく解説します。</div>
   </div>
@@ -567,6 +570,12 @@ function calcTotalData() {
   return merged;
 }
 
+// ====== APIキーリセット ======
+function resetApiKey() {
+  localStorage.removeItem('anthropic_api_key');
+  alert('APIキーをリセットしました。次回「解説を生成」ボタンを押すと再入力できます。');
+}
+
 // ====== AI グラフ解説 ======
 async function runAiAnalysis() {
   const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
@@ -601,23 +610,50 @@ async function runAiAnalysis() {
 
 このデータから読み取れる読者層の特徴、注目すべきポイント、広告出稿や編集方針へのヒントを、3〜4文の日本語で簡潔にわかりやすく解説してください。マーケティング担当者が即座に活用できるような、具体的で前向きなコメントをお願いします。`;
 
+  // APIキーをlocalStorageから取得（未設定の場合は入力ダイアログを表示）
+  let apiKey = localStorage.getItem('anthropic_api_key') || '';
+  if (!apiKey) {
+    apiKey = prompt('Anthropic APIキーを入力してください（sk-ant-...）\n※入力後はブラウザに保存されます。外部に送信されることはありません。');
+    if (!apiKey) {
+      body.className = 'ai-insight-body';
+      body.textContent = '⚠️ APIキーが未入力のため、AI解説を生成できません。';
+      btn.disabled = false;
+      return;
+    }
+    localStorage.setItem('anthropic_api_key', apiKey.trim());
+  }
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      // APIキーが無効な場合はlocalStorageから削除して再入力を促す
+      if (response.status === 401) {
+        localStorage.removeItem('anthropic_api_key');
+        throw new Error('APIキーが無効です。次回実行時に再入力してください。');
+      }
+      throw new Error(err.error?.message || `HTTPエラー: ${response.status}`);
+    }
     const result = await response.json();
     const text = result.content?.map(c => c.text || '').join('') || '解説を取得できませんでした。';
     body.className = 'ai-insight-body';
     body.textContent = text;
   } catch(e) {
     body.className = 'ai-insight-body';
-    body.textContent = '⚠️ AI解説の取得に失敗しました。しばらく待ってから再度お試しください。';
+    body.textContent = '⚠️ AI解説の取得に失敗しました。' + (e.message ? `（${e.message}）` : 'しばらく待ってから再度お試しください。');
   } finally {
     btn.disabled = false;
   }
