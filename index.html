@@ -974,12 +974,23 @@ function renderAgeBreakdown(data) {
     '40代': '#e67e22', '50代': '#c0392b', '60代': '#8e44ad', '70代以上': '#16a085'
   };
 
+  // トップジャンルを取得（全体比率から上位2件）
+  const topGenres = Object.entries(data.genre)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([g]) => g);
+
   if (currentAgeFilter === 'all') {
-    // シンプルな全体リスト
+    // シンプルな全体リスト（トップジャンルタグ付き）
     const rows = ageEntries.map(([age, count]) => {
       const pct = total > 0 ? Math.round(count / total * 100) : 0;
       const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
       const color = AGE_COLORS[age] || '#888';
+      const genreTags = topGenres.map((g, i) => {
+        const tagColor = i === 0 ? '#e8b84b' : '#16a085';
+        return `<span style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:${tagColor}22;color:${tagColor};border:1px solid ${tagColor}44;">▶ ${g}</span>`;
+      }).join('');
       return `
         <tr>
           <td><span class="age-label">${age}</span></td>
@@ -990,11 +1001,12 @@ function renderAgeBreakdown(data) {
           </td>
           <td class="right"><span class="pct-badge">${pct}%</span></td>
           <td class="right" style="color:var(--muted);">${count}件</td>
-          <td></td>
+          <td>${genreTags}</td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ よく行くジャンルは全体の上位2ジャンルを参考表示</div>
       <table class="age-breakdown-table">
         <thead>
           <tr>
@@ -1002,7 +1014,7 @@ function renderAgeBreakdown(data) {
             <th class="bar-cell">割合</th>
             <th class="right">%</th>
             <th class="right">回答数</th>
-            <th></th>
+            <th>よく行くジャンル</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
