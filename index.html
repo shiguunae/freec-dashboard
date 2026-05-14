@@ -633,6 +633,24 @@ const MULTI_COLORS = [
   '#e8b84b','#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e91e63','#f39c12','#1abc9c','#3498db','#9b59b6','#e74c3c','#2ecc71'
 ];
 
+// ===== 固定マスタ（順序・色を全月統一） =====
+const AGE_MASTER = ['10代','20代','30代','40代','50代','60代','70代以上'];
+const AGE_COLORS_FIXED = {
+  '10代': '#3498db', '20代': '#e8b84b', '30代': '#27ae60',
+  '40代': '#e67e22', '50代': '#c0392b', '60代': '#8e44ad', '70代以上': '#16a085'
+};
+
+const PURPOSE_MASTER = ['観光','出張（道内）','出張（道外）','帰省','日常利用（地元）','仕事（地元）'];
+
+const GENRE_MASTER = ['バー','ダーツバー','シーシャバー','カジュアルバー','コンセプトバー','カジュアルパブ','ライブ','ショー','クラブ','ガールズバー','スナック','パブ','ニュークラブ','ラウンジ'];
+const GENRE_COLORS_FIXED = {
+  'バー':       '#e8b84b', 'ダーツバー':   '#c0392b', 'シーシャバー':   '#2980b9',
+  'カジュアルバー': '#27ae60', 'コンセプトバー': '#8e44ad', 'カジュアルパブ':  '#e67e22',
+  'ライブ':      '#16a085', 'ショー':       '#e91e63', 'クラブ':       '#f39c12',
+  'ガールズバー':  '#1abc9c', 'スナック':     '#3498db', 'パブ':         '#9b59b6',
+  'ニュークラブ':  '#e74c3c', 'ラウンジ':     '#2ecc71'
+};
+
 let currentIssue = '4月号';
 let charts = {};
 
@@ -806,11 +824,15 @@ function destroyChart(id) {
 
 function renderGender(data) {
   destroyChart('gender');
-  const labels = Object.keys(data.gender).filter(k => data.gender[k] > 0);
-  const values = labels.map(k => data.gender[k]);
+  // 男性・女性ともに固定順・固定色（男性=青、女性=ピンク）
+  const GENDER_ORDER = ['男性', '女性'];
+  const GENDER_COLORS = { '男性': PALETTE.blue, '女性': PALETTE.pink };
+  const labels = GENDER_ORDER.filter(k => data.gender[k] !== undefined);
+  const values = labels.map(k => data.gender[k] || 0);
+  const bgColors = labels.map(k => GENDER_COLORS[k]);
   charts.gender = new Chart(document.getElementById('genderChart'), {
     type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: [PALETTE.blue, PALETTE.pink], borderWidth: 0 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: bgColors, borderWidth: 0 }] },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '55%',
       plugins: {
@@ -864,12 +886,13 @@ function makeBarDatalabels() {
 
 function renderAge(data) {
   destroyChart('age');
-  const labels = Object.keys(data.age);
-  const values = Object.values(data.age);
-  const maxVal = Math.max(...values);
+  // 固定順（若い順）・0件も含めて全表示・固定色
+  const labels = AGE_MASTER;
+  const values = labels.map(k => data.age[k] || 0);
+  const maxVal = Math.max(...values, 1);
   charts.age = new Chart(document.getElementById('ageChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'), borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]), borderWidth: 1, borderRadius: 6 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(k => (AGE_COLORS_FIXED[k] || '#888') + 'cc'), borderColor: labels.map(k => AGE_COLORS_FIXED[k] || '#888'), borderWidth: 1, borderRadius: 6 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 28 } },
@@ -884,10 +907,10 @@ function renderAge(data) {
 
 function renderPurpose(data) {
   destroyChart('purpose');
-  const entries = Object.entries(data.purpose).filter(([,v]) => v > 0);
-  const labels = entries.map(([k]) => k);
-  const values = entries.map(([,v]) => v);
-  const maxVal = Math.max(...values);
+  // 固定マスタ順・0件も全表示
+  const labels = PURPOSE_MASTER;
+  const values = labels.map(k => data.purpose[k] || 0);
+  const maxVal = Math.max(...values, 1);
   charts.purpose = new Chart(document.getElementById('purposeChart'), {
     type: 'bar',
     data: { labels, datasets: [{ data: values, backgroundColor: PALETTE.teal + 'cc', borderColor: PALETTE.teal, borderWidth: 1, borderRadius: 6 }] },
@@ -908,13 +931,13 @@ function renderPurpose(data) {
 
 function renderGenre(data) {
   destroyChart('genre');
-  const entries = Object.entries(data.genre).filter(([,v]) => v > 0).sort((a,b)=>b[1]-a[1]);
-  const labels = entries.map(([k]) => k);
-  const values = entries.map(([,v]) => v);
-  const maxVal = Math.max(...values);
+  // 固定マスタ順・固定色・0件も全表示
+  const labels = GENRE_MASTER;
+  const values = labels.map(k => data.genre[k] || 0);
+  const maxVal = Math.max(...values, 1);
   charts.genre = new Chart(document.getElementById('genreChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'), borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]), borderWidth: 1, borderRadius: 6 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(k => (GENRE_COLORS_FIXED[k] || '#888') + 'cc'), borderColor: labels.map(k => GENRE_COLORS_FIXED[k] || '#888'), borderWidth: 1, borderRadius: 6 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 30 } },
@@ -965,14 +988,12 @@ function renderAgeBreakdown(data) {
   const container = document.getElementById('ageBreakdownBody');
   if (!container) return;
 
-  const ageEntries = Object.entries(data.age).filter(([, v]) => v > 0);
+  // 固定マスタ順・0件も含めて全表示
+  const ageEntries = AGE_MASTER.map(age => [age, data.age[age] || 0]);
   const total = ageEntries.reduce((s, [, v]) => s + v, 0);
-  const maxVal = Math.max(...ageEntries.map(([, v]) => v));
+  const maxVal = Math.max(...ageEntries.map(([, v]) => v), 1);
 
-  const AGE_COLORS = {
-    '10代': '#3498db', '20代': '#e8b84b', '30代': '#27ae60',
-    '40代': '#e67e22', '50代': '#c0392b', '60代': '#8e44ad', '70代以上': '#16a085'
-  };
+  const AGE_COLORS = AGE_COLORS_FIXED;
 
   // トップジャンルを取得（全体比率から上位2件）
   const topGenres = Object.entries(data.genre)
@@ -1171,11 +1192,12 @@ function renderGenreBreakdown(data) {
   const container = document.getElementById('genreBreakdownBody');
   if (!container) return;
 
-  let entries = Object.entries(data.genre).filter(([, v]) => v > 0);
+  // 固定マスタ順ベース、0件も含めて全表示
+  let entries = GENRE_MASTER.map(g => [g, data.genre[g] || 0]);
 
   if (currentGenreFilter === 'asc') {
     entries.sort((a, b) => a[1] - b[1]);
-  } else {
+  } else if (currentGenreFilter !== 'all') {
     entries.sort((a, b) => b[1] - a[1]);
   }
 
@@ -1184,12 +1206,12 @@ function renderGenreBreakdown(data) {
   }
 
   const total = Object.values(data.genre).reduce((s, v) => s + v, 0);
-  const maxVal = Math.max(...entries.map(([, v]) => v));
+  const maxVal = Math.max(...entries.map(([, v]) => v), 1);
 
   const rows = entries.map(([genre, count], i) => {
     const pct = total > 0 ? Math.round(count / total * 100) : 0;
     const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    const color = MULTI_COLORS[i % MULTI_COLORS.length];
+    const color = GENRE_COLORS_FIXED[genre] || MULTI_COLORS[i % MULTI_COLORS.length];
     const rank = currentGenreFilter === 'asc'
       ? entries.length - i
       : i + 1;
