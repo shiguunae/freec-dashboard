@@ -1369,11 +1369,31 @@ function renderShopRecBreakdown(data) {
     </table>`;
 }
 
-const ISSUE_URLS = {
+const ISSUE_URLS_DEFAULT = {
   "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
   "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
   "5月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9Gi34IZW6mHKnFEuSS82_bk2Ch5jzqVZylGv7l3M47HiVthR3il7aSQXXWVH_cqyYsuxBLVewCt-_/pub?gid=171044816&single=true&output=csv"
 };
+
+// localStorageから復元し、デフォルトURLとマージ
+function loadSavedUrls() {
+  try {
+    const saved = localStorage.getItem('freec_issue_urls');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return Object.assign({}, ISSUE_URLS_DEFAULT, parsed);
+    }
+  } catch(e) {}
+  return Object.assign({}, ISSUE_URLS_DEFAULT);
+}
+
+function saveUrls() {
+  try {
+    localStorage.setItem('freec_issue_urls', JSON.stringify(ISSUE_URLS));
+  } catch(e) {}
+}
+
+const ISSUE_URLS = loadSavedUrls();
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
@@ -1407,6 +1427,7 @@ async function addIssueUrl() {
     if (!confirm(`${issue} のURLは既に登録されています。上書きしますか？`)) return;
   }
   ISSUE_URLS[issue] = url;
+  saveUrls();
   document.getElementById('newIssueName').value = '';
   document.getElementById('newIssueUrl').value  = '';
   renderUrlList();
@@ -1422,6 +1443,7 @@ function removeIssue(issue) {
   if (!confirm(`${issue} の登録を削除しますか？`)) return;
   delete ISSUE_URLS[issue];
   delete ISSUES[issue];
+  saveUrls();
   renderUrlList();
   rebuildTabs();
   const remaining = Object.keys(ISSUES);
