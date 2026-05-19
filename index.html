@@ -1460,7 +1460,7 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
     const idxAge     = headers.findIndex(h => h.includes('年代'));
     const idxPurpose = headers.findIndex(h => h.includes('目的'));
     const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
-    const idxShopRec = headers.findIndex(h => h.includes('行ってみて良かった') || h.includes('掲載店舗') || h.includes('FreeC掲載') || h.includes('すすきのFreeC'));
+    const idxShopRec = 9; // J列（10列目）固定：すすきのFreeC掲載店舗内で行ってみて良かったお店
 
     const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
     const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
