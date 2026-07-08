@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>フリーペーパー 読者アンケート集計</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1456,7 +1459,9 @@ function removeIssue(issue) {
 // ====== CSV解析 ======
 async function loadIssueFromUrl(issueName, url, silent = false) {
   try {
-    const res = await fetch(url);
+    // キャッシュ回避のためタイムスタンプを付与し、no-storeでブラウザキャッシュを無効化
+    const noCacheUrl = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const res = await fetch(noCacheUrl, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
 
