@@ -536,6 +536,17 @@
       <button class="btn" onclick="addIssueUrl()">＋ 追加して読み込む</button>
     </div>
     <div style="font-size:11px; color:var(--muted); margin-top:10px;">💡 登録したURLは5分ごとに自動更新されます</div>
+
+    <div id="syncHelperBox" style="display:none; margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
+      <div style="font-size:12px; font-weight:700; color:var(--accent); margin-bottom:6px;">📤 他の端末にも反映するには</div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.7; margin-bottom:10px;">
+        この変更は今この画面だけの一時的な表示です。<b>他の端末（PC/スマホ）にも反映するには</b>、下のテキストをコピーして、GitHubリポジトリ内の <code>issue-urls.json</code> の中身をこの内容に置き換えてコミットしてください。コミット後、最大5分以内に全端末に反映されます。
+      </div>
+      <textarea id="syncHelperText" readonly style="width:100%; min-height:120px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:11px; font-family:monospace; outline:none; resize:vertical;"></textarea>
+      <div style="margin-top:10px;">
+        <button class="btn secondary" onclick="copySyncHelper()">📋 コピーする</button>
+      </div>
+    </div>
   </div>
 
   <div class="kpi-row" id="kpiRow"></div>
@@ -1372,31 +1383,49 @@ function renderShopRecBreakdown(data) {
     </table>`;
 }
 
+// フォールバック用デフォルト（issue-urls.jsonが取得できなかった場合のみ使用）
 const ISSUE_URLS_DEFAULT = {
   "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
   "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
   "5月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9Gi34IZW6mHKnFEuSS82_bk2Ch5jzqVZylGv7l3M47HiVthR3il7aSQXXWVH_cqyYsuxBLVewCt-_/pub?gid=171044816&single=true&output=csv"
 };
 
-// localStorageから復元し、デフォルトURLとマージ
-function loadSavedUrls() {
+// 共有設定ファイル（リポジトリ直下）。全端末はこのファイルを見るので、
+// このファイルを編集してGitHubにコミットすれば、PC/スマホどちらの設定も同じになります。
+const SHARED_CONFIG_URL = 'issue-urls.json';
+
+// 実行中に使う設定（起動時に共有ファイルから読み込んで埋める）
+const ISSUE_URLS = {};
+
+// 共有ファイルを読み込む。取得できない場合はデフォルト値にフォールバック。
+async function loadSharedUrls() {
   try {
-    const saved = localStorage.getItem('freec_issue_urls');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return Object.assign({}, ISSUE_URLS_DEFAULT, parsed);
-    }
-  } catch(e) {}
-  return Object.assign({}, ISSUE_URLS_DEFAULT);
+    const res = await fetch(SHARED_CONFIG_URL + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    Object.keys(ISSUE_URLS).forEach(k => delete ISSUE_URLS[k]);
+    Object.assign(ISSUE_URLS, ISSUE_URLS_DEFAULT, data);
+  } catch (e) {
+    console.warn('[共有設定] issue-urls.json の取得に失敗したためデフォルト値を使用します: ' + e.message);
+    Object.assign(ISSUE_URLS, ISSUE_URLS_DEFAULT);
+  }
 }
 
-function saveUrls() {
-  try {
-    localStorage.setItem('freec_issue_urls', JSON.stringify(ISSUE_URLS));
-  } catch(e) {}
+// ISSUE_URLSの現在の中身を、issue-urls.jsonにそのまま貼り付けられる形で表示する
+function showSyncHelper() {
+  const box = document.getElementById('syncHelperBox');
+  const ta  = document.getElementById('syncHelperText');
+  if (!box || !ta) return;
+  ta.value = JSON.stringify(ISSUE_URLS, null, 2);
+  box.style.display = 'block';
 }
 
-const ISSUE_URLS = loadSavedUrls();
+function copySyncHelper() {
+  const ta = document.getElementById('syncHelperText');
+  ta.select();
+  document.execCommand('copy');
+  alert('コピーしました。GitHubの issue-urls.json を開いて、この内容に貼り替えてコミットしてください。\n（コミットすると、他の端末にも最大5分以内に反映されます）');
+}
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
@@ -1430,10 +1459,10 @@ async function addIssueUrl() {
     if (!confirm(`${issue} のURLは既に登録されています。上書きしますか？`)) return;
   }
   ISSUE_URLS[issue] = url;
-  saveUrls();
   document.getElementById('newIssueName').value = '';
   document.getElementById('newIssueUrl').value  = '';
   renderUrlList();
+  showSyncHelper();
   await loadIssueFromUrl(issue, url);
 }
 
@@ -1446,8 +1475,8 @@ function removeIssue(issue) {
   if (!confirm(`${issue} の登録を削除しますか？`)) return;
   delete ISSUE_URLS[issue];
   delete ISSUES[issue];
-  saveUrls();
   renderUrlList();
+  showSyncHelper();
   rebuildTabs();
   const remaining = Object.keys(ISSUES);
   if (remaining.length > 0) {
@@ -1686,6 +1715,8 @@ async function exportPDF() {
 
 // ====== 起動 ======
 window.addEventListener('load', async () => {
+  // 共有設定ファイル(issue-urls.json)を読み込んでからタブを作る
+  await loadSharedUrls();
   buildTabs();
   renderAll();
 
@@ -1694,8 +1725,11 @@ window.addEventListener('load', async () => {
     await loadIssueFromUrl(issue, url, true);
   }
 
-  // 5分ごとに全登録URLを自動更新
+  // 5分ごとに、共有設定ファイルを読み直してから全登録URLを自動更新
+  // → 他の端末でissue-urls.jsonが更新されていれば、ここで自動的に追いつく
   setInterval(async () => {
+    await loadSharedUrls();
+    buildTabs();
     for (const [issue, url] of Object.entries(ISSUE_URLS)) {
       await loadIssueFromUrl(issue, url, true);
     }
