@@ -607,6 +607,8 @@
       <button class="filter-chip active" data-filter="all" onclick="setShopRecFilter('all', this)">すべて（件数順）</button>
       <button class="filter-chip" data-filter="top5" onclick="setShopRecFilter('top5', this)">TOP 5</button>
       <button class="filter-chip" data-filter="asc" onclick="setShopRecFilter('asc', this)">昇順</button>
+      <button class="filter-chip" data-filter="male" onclick="setShopRecFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
+      <button class="filter-chip" data-filter="female" onclick="setShopRecFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
     </div>
     <div id="shopRecBreakdownBody"></div>
   </div>
@@ -623,6 +625,17 @@
     <div id="ageBreakdownBody"></div>
   </div>
 
+  <!-- 来訪目的別回答リスト -->
+  <div class="age-breakdown-card">
+    <div class="chart-title">来訪目的 回答リスト</div>
+    <div class="age-breakdown-filters" id="purposeFilterRow">
+      <button class="filter-chip active" data-filter="all" onclick="setPurposeFilter('all', this)">すべて（件数順）</button>
+      <button class="filter-chip" data-filter="male" onclick="setPurposeFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
+      <button class="filter-chip" data-filter="female" onclick="setPurposeFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
+    </div>
+    <div id="purposeBreakdownBody"></div>
+  </div>
+
   <!-- ジャンル別回答リスト -->
   <div class="age-breakdown-card">
     <div class="chart-title">よく行くお店ジャンル 回答リスト</div>
@@ -630,6 +643,8 @@
       <button class="filter-chip active" data-filter="all" onclick="setGenreFilter('all', this)">すべて（件数順）</button>
       <button class="filter-chip" data-filter="top5" onclick="setGenreFilter('top5', this)">TOP 5</button>
       <button class="filter-chip" data-filter="asc" onclick="setGenreFilter('asc', this)">昇順</button>
+      <button class="filter-chip" data-filter="male" onclick="setGenreFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
+      <button class="filter-chip" data-filter="female" onclick="setGenreFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
     </div>
     <div id="genreBreakdownBody"></div>
   </div>
@@ -738,10 +753,20 @@ function calcTotalData() {
   if (allIssues.length === 0) return null;
   const merged = {
     total: 0,
-    gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {}
+    gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {}, byGender: {}
   };
   const mergeObj = (target, src) => {
     Object.entries(src).forEach(([k, v]) => { target[k] = (target[k] || 0) + v; });
+  };
+  const mergeGenderBucket = (g, srcBucket) => {
+    if (!merged.byGender[g]) merged.byGender[g] = { total: 0, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
+    const t = merged.byGender[g];
+    t.total += srcBucket.total || 0;
+    mergeObj(t.location, srcBucket.location || {});
+    mergeObj(t.age, srcBucket.age || {});
+    mergeObj(t.purpose, srcBucket.purpose || {});
+    mergeObj(t.genre, srcBucket.genre || {});
+    mergeObj(t.shopRec, srcBucket.shopRec || {});
   };
   allIssues.forEach(d => {
     merged.total += d.total;
@@ -751,6 +776,7 @@ function calcTotalData() {
     mergeObj(merged.purpose, d.purpose);
     mergeObj(merged.genre, d.genre);
     if (d.shopRec) mergeObj(merged.shopRec, d.shopRec);
+    if (d.byGender) Object.entries(d.byGender).forEach(([g, bucket]) => mergeGenderBucket(g, bucket));
   });
   return merged;
 }
@@ -1010,6 +1036,7 @@ function renderAll() {
   renderPurpose(data);
   renderGenre(data);
   renderAgeBreakdown(data);
+  renderPurposeBreakdown(data);
   renderGenreBreakdown(data);
   renderShopRec(data);
   renderShopRecBreakdown(data);
@@ -1085,18 +1112,23 @@ function renderAgeBreakdown(data) {
       </table>`;
 
   } else if (currentAgeFilter === 'gender') {
-    // 男女別クロス集計（元データがない場合は概算で表示）
-    // 実際のCSVからクロスデータが取れないため、号ごとの全体比率を男女に按分して参考表示
+    // 実データ（byGender）があればそれを使用。無ければ全体比率から按分した参考値にフォールバック
+    const hasReal = data.byGender && (data.byGender['男性'] || data.byGender['女性']);
     const gTotal = Object.values(data.gender).reduce((a, b) => a + b, 0);
     const maleRate = gTotal > 0 ? (data.gender['男性'] || 0) / gTotal : 0.5;
-    const femaleRate = 1 - maleRate;
 
     const rows = ageEntries.map(([age, count]) => {
       const pct = total > 0 ? Math.round(count / total * 100) : 0;
-      const maleEst = Math.round(count * maleRate);
-      const femaleEst = count - maleEst;
       const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
       const color = AGE_COLORS[age] || '#888';
+      let maleCount, femaleCount;
+      if (hasReal) {
+        maleCount = (data.byGender['男性']?.age?.[age]) || 0;
+        femaleCount = (data.byGender['女性']?.age?.[age]) || 0;
+      } else {
+        maleCount = Math.round(count * maleRate);
+        femaleCount = count - maleCount;
+      }
       return `
         <tr>
           <td><span class="age-label">${age}</span></td>
@@ -1106,21 +1138,21 @@ function renderAgeBreakdown(data) {
             </div>
           </td>
           <td class="right"><span class="pct-badge">${pct}%</span></td>
-          <td class="right" style="color:#2980b9;">♂ ${maleEst}件</td>
-          <td class="right" style="color:#e91e63;">♀ ${femaleEst}件</td>
+          <td class="right" style="color:#2980b9;">♂ ${maleCount}件</td>
+          <td class="right" style="color:#e91e63;">♀ ${femaleCount}件</td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
-      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の男女比率をもとにした参考値</div>
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${hasReal ? '※ 回答データから実際の男女別件数を集計' : '※ 性別のクロスデータが未取得のため、全体の男女比率をもとにした参考値'}</div>
       <table class="age-breakdown-table">
         <thead>
           <tr>
             <th>年代</th>
             <th class="bar-cell">割合</th>
             <th class="right">%</th>
-            <th class="right" style="color:#2980b9;">男性(参考)</th>
-            <th class="right" style="color:#e91e63;">女性(参考)</th>
+            <th class="right" style="color:#2980b9;">男性</th>
+            <th class="right" style="color:#e91e63;">女性</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1220,6 +1252,68 @@ function renderAgeBreakdown(data) {
   }
 }
 
+// ====== 来訪目的別回答リスト ======
+let currentPurposeFilter = 'all';
+
+function setPurposeFilter(filter, btn) {
+  currentPurposeFilter = filter;
+  document.querySelectorAll('#purposeFilterRow .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
+  if (data) renderPurposeBreakdown(data);
+}
+
+function renderPurposeBreakdown(data) {
+  const container = document.getElementById('purposeBreakdownBody');
+  if (!container) return;
+
+  const isGenderView = currentPurposeFilter === 'male' || currentPurposeFilter === 'female';
+  const genderKey = currentPurposeFilter === 'male' ? '男性' : '女性';
+  const srcPurpose = isGenderView ? (data.byGender?.[genderKey]?.purpose || {}) : data.purpose;
+  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
+
+  const entries = PURPOSE_MASTER.map(p => [p, srcPurpose[p] || 0]).sort((a, b) => b[1] - a[1]);
+  const total = Object.values(srcPurpose).reduce((s, v) => s + v, 0);
+  const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+  const accentColor = currentPurposeFilter === 'male' ? '#2980b9' : currentPurposeFilter === 'female' ? '#e91e63' : PALETTE.teal;
+
+  const rows = entries.map(([purpose, count], i) => {
+    const pct = total > 0 ? Math.round(count / total * 100) : 0;
+    const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
+    return `
+      <tr>
+        <td style="width:32px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;">${i + 1}</td>
+        <td><span class="age-label" style="color:${accentColor};">${purpose}</span></td>
+        <td class="bar-cell">
+          <div class="mini-bar-wrap">
+            <div class="mini-bar" style="width:${barPct}%; background:${accentColor};"></div>
+          </div>
+        </td>
+        <td class="right"><span class="pct-badge" style="color:${accentColor};background:${accentColor}22;">${pct}%</span></td>
+        <td class="right" style="color:var(--muted);">${count}件</td>
+      </tr>`;
+  }).join('');
+
+  const noteHtml = isGenderView
+    ? (hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`)
+    : '';
+
+  container.innerHTML = `
+    ${noteHtml ? `<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${noteHtml}</div>` : ''}
+    <table class="age-breakdown-table">
+      <thead>
+        <tr>
+          <th style="width:32px;">#</th>
+          <th>目的</th>
+          <th class="bar-cell">割合</th>
+          <th class="right">%</th>
+          <th class="right">回答数</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 // ====== ジャンル別回答リスト ======
 let currentGenreFilter = 'all';
 
@@ -1235,12 +1329,17 @@ function renderGenreBreakdown(data) {
   const container = document.getElementById('genreBreakdownBody');
   if (!container) return;
 
+  const isGenderView = currentGenreFilter === 'male' || currentGenreFilter === 'female';
+  const genderKey = currentGenreFilter === 'male' ? '男性' : '女性';
+  const srcGenre = isGenderView ? (data.byGender?.[genderKey]?.genre || {}) : data.genre;
+  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
+
   // 固定マスタ順ベース、0件も含めて全表示
-  let entries = GENRE_MASTER.map(g => [g, data.genre[g] || 0]);
+  let entries = GENRE_MASTER.map(g => [g, srcGenre[g] || 0]);
 
   if (currentGenreFilter === 'asc') {
     entries.sort((a, b) => a[1] - b[1]);
-  } else if (currentGenreFilter !== 'all') {
+  } else {
     entries.sort((a, b) => b[1] - a[1]);
   }
 
@@ -1248,13 +1347,14 @@ function renderGenreBreakdown(data) {
     entries = entries.slice(0, 5);
   }
 
-  const total = Object.values(data.genre).reduce((s, v) => s + v, 0);
+  const total = Object.values(srcGenre).reduce((s, v) => s + v, 0);
   const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+  const accentColor = currentGenreFilter === 'male' ? '#2980b9' : currentGenreFilter === 'female' ? '#e91e63' : null;
 
   const rows = entries.map(([genre, count], i) => {
     const pct = total > 0 ? Math.round(count / total * 100) : 0;
     const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    const color = GENRE_COLORS_FIXED[genre] || MULTI_COLORS[i % MULTI_COLORS.length];
+    const color = accentColor || GENRE_COLORS_FIXED[genre] || MULTI_COLORS[i % MULTI_COLORS.length];
     const rank = currentGenreFilter === 'asc'
       ? entries.length - i
       : i + 1;
@@ -1272,7 +1372,12 @@ function renderGenreBreakdown(data) {
       </tr>`;
   }).join('');
 
+  const noteHtml = isGenderView
+    ? `<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`}</div>`
+    : '';
+
   container.innerHTML = `
+    ${noteHtml}
     <table class="age-breakdown-table">
       <thead>
         <tr>
@@ -1336,7 +1441,12 @@ function renderShopRecBreakdown(data) {
   if (!container) return;
   if (!data.shopRec || Object.keys(data.shopRec).length === 0) return;
 
-  let entries = Object.entries(data.shopRec).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+  const isGenderView = currentShopRecFilter === 'male' || currentShopRecFilter === 'female';
+  const genderKey = currentShopRecFilter === 'male' ? '男性' : '女性';
+  const srcShopRec = isGenderView ? (data.byGender?.[genderKey]?.shopRec || {}) : data.shopRec;
+  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
+
+  let entries = Object.entries(srcShopRec).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
 
   if (currentShopRecFilter === 'asc') {
     entries.sort((a, b) => a[1] - b[1]);
@@ -1345,13 +1455,14 @@ function renderShopRecBreakdown(data) {
     entries = entries.slice(0, 5);
   }
 
-  const total = Object.values(data.shopRec).reduce((s, v) => s + v, 0);
+  const total = Object.values(srcShopRec).reduce((s, v) => s + v, 0);
   const maxVal = Math.max(...entries.map(([,v]) => v), 1);
+  const accentColor = currentShopRecFilter === 'male' ? '#2980b9' : currentShopRecFilter === 'female' ? '#e91e63' : null;
 
   const rows = entries.map(([shop, count], i) => {
     const p = total > 0 ? Math.round(count / total * 100) : 0;
     const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    const color = MULTI_COLORS[i % MULTI_COLORS.length];
+    const color = accentColor || MULTI_COLORS[i % MULTI_COLORS.length];
     const rank = currentShopRecFilter === 'asc' ? entries.length - i : i + 1;
     return `
       <tr>
@@ -1367,8 +1478,12 @@ function renderShopRecBreakdown(data) {
       </tr>`;
   }).join('');
 
+  const noteHtml = isGenderView
+    ? (hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`)
+    : '※ 複数回答可。回答のあった号のみ表示';
+
   container.innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 複数回答可。回答のあった号のみ表示</div>
+    <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${noteHtml}</div>
     <table class="age-breakdown-table">
       <thead>
         <tr>
@@ -1519,24 +1634,51 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
     const idxShopRec = headers.findIndex(h => h.includes('行ってみて良かったお店')); // 列位置に依存せず見出し文字列で自動検出
 
     const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
-    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
+    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {}, byGender: {} };
+
+    // 性別ごとの集計バケツを用意（実際にシートに出てくる性別の値ごとに自動生成）
+    function genderBucket(g) {
+      if (!newData.byGender[g]) {
+        newData.byGender[g] = { total: 0, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
+      }
+      return newData.byGender[g];
+    }
 
     dataRows.forEach(row => {
       const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
+      const genderVal = idxGender >= 0 ? (row[idxGender] || '').trim() : '';
+      const gb = genderVal ? genderBucket(genderVal) : null;
+      if (gb) gb.total++;
+
       if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
-      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
-      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
-      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
+      if (idxLoc >= 0) {
+        count(newData.location, row[idxLoc]);
+        if (gb) count(gb.location, row[idxLoc]);
+      }
+      if (idxAge >= 0) {
+        count(newData.age, row[idxAge]);
+        if (gb) count(gb.age, row[idxAge]);
+      }
+      if (idxPurpose >= 0) {
+        count(newData.purpose, row[idxPurpose]);
+        if (gb) count(gb.purpose, row[idxPurpose]);
+      }
       if (idxGenre >= 0) {
         row[idxGenre].split(/[,、]/).forEach(g => {
           const g2 = g.replace(/^"|"$/g,'').trim();
-          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
+          if (g2) {
+            newData.genre[g2] = (newData.genre[g2] || 0) + 1;
+            if (gb) gb.genre[g2] = (gb.genre[g2] || 0) + 1;
+          }
         });
       }
       if (idxShopRec >= 0 && row[idxShopRec]) {
         row[idxShopRec].split(/[,、]/).forEach(s => {
           const s2 = s.replace(/^"|"$/g,'').trim();
-          if (s2) newData.shopRec[s2] = (newData.shopRec[s2] || 0) + 1;
+          if (s2) {
+            newData.shopRec[s2] = (newData.shopRec[s2] || 0) + 1;
+            if (gb) gb.shopRec[s2] = (gb.shopRec[s2] || 0) + 1;
+          }
         });
       }
     });
