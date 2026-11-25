@@ -3,14 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>フリーペーパー 読者アンケート集計</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Bebas+Neue&display=swap');
 
@@ -264,209 +259,6 @@
 
   .btn:hover { opacity: 0.85; }
   .btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-  .btn.pdf { background: #c0392b; color: #fff; }
-
-  /* PDFオーバーレイ */
-  #pdf-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-  }
-  #pdf-overlay.active { display: flex; }
-  #pdf-overlay .msg { color: #fff; font-size: 14px; font-family: 'Noto Sans JP', sans-serif; }
-  #pdf-overlay .spinner {
-    width: 48px; height: 48px;
-    border: 4px solid #333;
-    border-top-color: #e8b84b;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .tab.total-tab {
-    color: var(--accent);
-    border-left: 1px solid var(--border);
-    margin-left: auto;
-  }
-  .tab.total-tab.active { color: #fff; border-bottom-color: #fff; background: rgba(232,184,75,0.08); }
-
-  /* AI解説カード */
-  .ai-insight-card {
-    background: linear-gradient(135deg, #1a1a2e 0%, #161628 100%);
-    border: 1px solid #e8b84b55;
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-  .ai-insight-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #e8b84b, #c0392b);
-  }
-  .ai-insight-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .ai-insight-title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .ai-insight-body {
-    font-size: 13px;
-    color: #ccc;
-    line-height: 1.8;
-    min-height: 48px;
-  }
-  .ai-insight-body.loading {
-    color: var(--muted);
-    font-style: italic;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .ai-spinner {
-    width: 16px; height: 16px;
-    border: 2px solid #333;
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    flex-shrink: 0;
-  }
-  .btn.ai-btn {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    font-size: 11px;
-    padding: 5px 12px;
-  }
-  .btn.ai-btn:hover { background: var(--accent); color: #000; }
-  .btn.ai-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* 年代別回答リスト */
-  .age-breakdown-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-
-  .age-breakdown-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    margin-top: 16px;
-  }
-
-  .age-breakdown-table thead tr {
-    border-bottom: 2px solid var(--accent);
-  }
-
-  .age-breakdown-table th {
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .age-breakdown-table th.right { text-align: right; }
-  .age-breakdown-table td.right { text-align: right; }
-
-  .age-breakdown-table tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-  }
-
-  .age-breakdown-table tbody tr:last-child { border-bottom: none; }
-  .age-breakdown-table tbody tr:hover { background: rgba(232,184,75,0.05); }
-
-  .age-breakdown-table td {
-    padding: 10px 12px;
-    color: var(--text);
-    vertical-align: middle;
-  }
-
-  .age-label {
-    font-weight: 700;
-    color: var(--accent);
-    font-size: 13px;
-  }
-
-  .bar-cell { width: 160px; }
-
-  .mini-bar-wrap {
-    background: #2a2a2a;
-    border-radius: 4px;
-    height: 8px;
-    overflow: hidden;
-  }
-
-  .mini-bar {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.4s ease;
-  }
-
-  .pct-badge {
-    display: inline-block;
-    background: rgba(232,184,75,0.12);
-    color: var(--accent);
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    min-width: 48px;
-    text-align: center;
-  }
-
-  .age-breakdown-filters {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 4px;
-  }
-
-  .filter-chip {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    transition: all 0.2s;
-  }
-
-  .filter-chip.active {
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent);
-  }
-
-  .filter-chip:hover:not(.active) { color: var(--text); border-color: #555; }
 
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
@@ -490,15 +282,8 @@
     <div class="status-dot"></div>
     <span>自動集計</span>
     <span id="last-updated">—</span>
-    <button class="btn pdf" onclick="exportPDF()" style="margin-left:12px;">📄 PDFレポート出力</button>
   </div>
 </header>
-
-<!-- PDFレンダリング中オーバーレイ -->
-<div id="pdf-overlay">
-  <div class="spinner"></div>
-  <div class="msg" id="pdf-msg">PDFを生成しています...</div>
-</div>
 
 <div class="issue-tabs" id="issueTabs"></div>
 
@@ -536,31 +321,9 @@
       <button class="btn" onclick="addIssueUrl()">＋ 追加して読み込む</button>
     </div>
     <div style="font-size:11px; color:var(--muted); margin-top:10px;">💡 登録したURLは5分ごとに自動更新されます</div>
-
-    <div id="syncHelperBox" style="display:none; margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
-      <div style="font-size:12px; font-weight:700; color:var(--accent); margin-bottom:6px;">📤 他の端末にも反映するには</div>
-      <div style="font-size:11px; color:var(--muted); line-height:1.7; margin-bottom:10px;">
-        この変更は今この画面だけの一時的な表示です。<b>他の端末（PC/スマホ）にも反映するには</b>、下のテキストをコピーして、GitHubリポジトリ内の <code>issue-urls.json</code> の中身をこの内容に置き換えてコミットしてください。コミット後、最大5分以内に全端末に反映されます。
-      </div>
-      <textarea id="syncHelperText" readonly style="width:100%; min-height:120px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:11px; font-family:monospace; outline:none; resize:vertical;"></textarea>
-      <div style="margin-top:10px;">
-        <button class="btn secondary" onclick="copySyncHelper()">📋 コピーする</button>
-      </div>
-    </div>
   </div>
 
   <div class="kpi-row" id="kpiRow"></div>
-
-  <!-- AI解説カード -->
-  <div class="ai-insight-card" id="aiInsightCard">
-    <div class="ai-insight-header">
-      <div class="ai-insight-title">✦ AI グラフ解説</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn ai-btn" id="aiAnalyzeBtn" onclick="runAiAnalysis()">🤖 解説を生成</button>
-      </div>
-    </div>
-    <div class="ai-insight-body" id="aiInsightBody">「解説を生成」ボタンを押すと、現在表示中のデータをAIが分析してわかりやすく解説します。</div>
-  </div>
 
   <div class="charts-grid">
     <div class="chart-card">
@@ -591,64 +354,6 @@
     </div>
   </div>
 
-  <!-- 行ってみて良かったお店（6月号〜） -->
-  <div class="charts-grid wide" id="shopRecSection" style="display:none;">
-    <div class="chart-card">
-      <div class="chart-title">すすきのFreeC掲載店舗で行ってみて良かったお店</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">※ 6月号より追加の質問項目（複数回答可）</div>
-      <div class="chart-wrap tall"><canvas id="shopRecChart"></canvas></div>
-    </div>
-  </div>
-
-  <!-- 行ってみて良かったお店 回答リスト -->
-  <div class="age-breakdown-card" id="shopRecListSection" style="display:none;">
-    <div class="chart-title">行ってみて良かったお店 回答リスト</div>
-    <div class="age-breakdown-filters" id="shopRecFilterRow">
-      <button class="filter-chip active" data-filter="all" onclick="setShopRecFilter('all', this)">すべて（件数順）</button>
-      <button class="filter-chip" data-filter="top5" onclick="setShopRecFilter('top5', this)">TOP 5</button>
-      <button class="filter-chip" data-filter="asc" onclick="setShopRecFilter('asc', this)">昇順</button>
-      <button class="filter-chip" data-filter="male" onclick="setShopRecFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
-      <button class="filter-chip" data-filter="female" onclick="setShopRecFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
-    </div>
-    <div id="shopRecBreakdownBody"></div>
-  </div>
-
-  <!-- 年代別回答リスト -->
-  <div class="age-breakdown-card">
-    <div class="chart-title">年代別 回答リスト</div>
-    <div class="age-breakdown-filters" id="ageFilterRow">
-      <button class="filter-chip active" data-filter="all" onclick="setAgeFilter('all', this)">すべて</button>
-      <button class="filter-chip" data-filter="gender" onclick="setAgeFilter('gender', this)">男女別</button>
-      <button class="filter-chip" data-filter="location" onclick="setAgeFilter('location', this)">居住地別</button>
-      <button class="filter-chip" data-filter="purpose" onclick="setAgeFilter('purpose', this)">来訪目的別</button>
-    </div>
-    <div id="ageBreakdownBody"></div>
-  </div>
-
-  <!-- 来訪目的別回答リスト -->
-  <div class="age-breakdown-card">
-    <div class="chart-title">来訪目的 回答リスト</div>
-    <div class="age-breakdown-filters" id="purposeFilterRow">
-      <button class="filter-chip active" data-filter="all" onclick="setPurposeFilter('all', this)">すべて（件数順）</button>
-      <button class="filter-chip" data-filter="male" onclick="setPurposeFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
-      <button class="filter-chip" data-filter="female" onclick="setPurposeFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
-    </div>
-    <div id="purposeBreakdownBody"></div>
-  </div>
-
-  <!-- ジャンル別回答リスト -->
-  <div class="age-breakdown-card">
-    <div class="chart-title">よく行くお店ジャンル 回答リスト</div>
-    <div class="age-breakdown-filters" id="genreFilterRow">
-      <button class="filter-chip active" data-filter="all" onclick="setGenreFilter('all', this)">すべて（件数順）</button>
-      <button class="filter-chip" data-filter="top5" onclick="setGenreFilter('top5', this)">TOP 5</button>
-      <button class="filter-chip" data-filter="asc" onclick="setGenreFilter('asc', this)">昇順</button>
-      <button class="filter-chip" data-filter="male" onclick="setGenreFilter('male', this)" style="color:#2980b9;">♂ 男性のみ</button>
-      <button class="filter-chip" data-filter="female" onclick="setGenreFilter('female', this)" style="color:#e91e63;">♀ 女性のみ</button>
-    </div>
-    <div id="genreBreakdownBody"></div>
-  </div>
-
   <div class="source-note" id="sourceNote">表示中：サンプルデータ（3月号・4月号）　|　Googleスプレッドシート連携で自動更新されます</div>
 </div>
 
@@ -661,8 +366,7 @@ const ISSUES = {
     location: { '札幌市内': 27, '札幌市外（道内）': 5, '道外': 0, '海外': 1 },
     age: { '20代': 9, '30代': 9, '40代': 5, '50代': 10, '60代': 0, '70代以上': 0 },
     purpose: { '観光': 2, '出張（道内）': 0, '出張（道外）': 0, '帰省': 0, '日常利用（地元）': 22, '仕事（地元）': 9 },
-    genre: { 'バー': 14, 'ダーツバー': 5, 'シーシャバー': 1, 'カジュアルバー': 7, 'コンセプトバー': 1, 'カジュアルパブ': 0, 'ライブ': 3, 'ショー': 0, 'クラブ': 0, 'ガールズバー': 2, 'スナック': 12, 'パブ': 0, 'ニュークラブ': 2, 'ラウンジ': 0 },
-    shopRec: {}
+    genre: { 'バー': 14, 'ダーツバー': 5, 'シーシャバー': 1, 'カジュアルバー': 7, 'コンセプトバー': 1, 'カジュアルパブ': 0, 'ライブ': 3, 'ショー': 0, 'クラブ': 0, 'ガールズバー': 2, 'スナック': 12, 'パブ': 0, 'ニュークラブ': 2, 'ラウンジ': 0 }
   },
   '4月号': {
     total: 66,
@@ -670,37 +374,24 @@ const ISSUES = {
     location: { '札幌市内': 57, '札幌市外（道内）': 9, '道外': 0, '海外': 0 },
     age: { '20代': 19, '30代': 20, '40代': 15, '50代': 6, '60代': 5, '70代以上': 1 },
     purpose: { '観光': 5, '出張（道内）': 1, '出張（道外）': 0, '帰省': 1, '日常利用（地元）': 42, '仕事（地元）': 17 },
-    genre: { 'バー': 43, 'ダーツバー': 9, 'シーシャバー': 3, 'カジュアルバー': 12, 'コンセプトバー': 2, 'カジュアルパブ': 1, 'ライブ': 13, 'ショー': 1, 'クラブ': 3, 'ガールズバー': 5, 'スナック': 13, 'パブ': 3, 'ニュークラブ': 8, 'ラウンジ': 4 },
-    shopRec: {}
+    genre: { 'バー': 43, 'ダーツバー': 9, 'シーシャバー': 3, 'カジュアルバー': 12, 'コンセプトバー': 2, 'カジュアルパブ': 1, 'ライブ': 13, 'ショー': 1, 'クラブ': 3, 'ガールズバー': 5, 'スナック': 13, 'パブ': 3, 'ニュークラブ': 8, 'ラウンジ': 4 }
   }
 };
 
 const PALETTE = {
-  accent: '#e8b84b', red: '#c0392b', blue: '#2980b9', green: '#27ae60',
-  purple: '#8e44ad', orange: '#e67e22', teal: '#16a085', pink: '#e91e63',
+  accent: '#e8b84b',
+  red:    '#c0392b',
+  blue:   '#2980b9',
+  green:  '#27ae60',
+  purple: '#8e44ad',
+  orange: '#e67e22',
+  teal:   '#16a085',
+  pink:   '#e91e63',
 };
 
 const MULTI_COLORS = [
   '#e8b84b','#c0392b','#2980b9','#27ae60','#8e44ad','#e67e22','#16a085','#e91e63','#f39c12','#1abc9c','#3498db','#9b59b6','#e74c3c','#2ecc71'
 ];
-
-// ===== 固定マスタ（順序・色を全月統一） =====
-const AGE_MASTER = ['10代','20代','30代','40代','50代','60代','70代以上'];
-const AGE_COLORS_FIXED = {
-  '10代': '#3498db', '20代': '#e8b84b', '30代': '#27ae60',
-  '40代': '#e67e22', '50代': '#c0392b', '60代': '#8e44ad', '70代以上': '#16a085'
-};
-
-const PURPOSE_MASTER = ['観光','出張（道内）','出張（道外）','帰省','日常利用（地元）','仕事（地元）'];
-
-const GENRE_MASTER = ['バー','ダーツバー','シーシャバー','カジュアルバー','コンセプトバー','カジュアルパブ','ライブ','ショー','クラブ','ガールズバー','スナック','パブ','ニュークラブ','ラウンジ'];
-const GENRE_COLORS_FIXED = {
-  'バー':       '#e8b84b', 'ダーツバー':   '#c0392b', 'シーシャバー':   '#2980b9',
-  'カジュアルバー': '#27ae60', 'コンセプトバー': '#8e44ad', 'カジュアルパブ':  '#e67e22',
-  'ライブ':      '#16a085', 'ショー':       '#e91e63', 'クラブ':       '#f39c12',
-  'ガールズバー':  '#1abc9c', 'スナック':     '#3498db', 'パブ':         '#9b59b6',
-  'ニュークラブ':  '#e74c3c', 'ラウンジ':     '#2ecc71'
-};
 
 let currentIssue = '4月号';
 let charts = {};
@@ -708,150 +399,34 @@ let charts = {};
 // ====== 号タブ生成 ======
 function buildTabs() {
   const container = document.getElementById('issueTabs');
-  container.innerHTML = '';
+  const issues = Object.keys(ISSUES);
+  // 未来の号も追加
   const allIssues = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
   allIssues.forEach(issue => {
     const btn = document.createElement('button');
     btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
-    btn.dataset.issue = issue;
-    const hasLive = !!ISSUE_URLS[issue];
-    btn.textContent = issue + (hasLive ? ' 🔴' : '');
-    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
+    btn.textContent = issue;
+    btn.disabled = !ISSUES[issue];
+    if (!ISSUES[issue]) btn.style.opacity = '0.3';
     btn.onclick = () => selectIssue(issue, btn);
     container.appendChild(btn);
   });
-
-  // 合計タブ（データがある場合のみ有効化）
-  const totalBtn = document.createElement('button');
-  const loadedCount = Object.keys(ISSUES).length;
-  totalBtn.className = 'tab total-tab' + (currentIssue === '__total__' ? ' active' : '');
-  totalBtn.dataset.issue = '__total__';
-  totalBtn.textContent = '📊 合計';
-  if (loadedCount === 0) { totalBtn.style.opacity = '0.3'; totalBtn.disabled = true; }
-  totalBtn.onclick = () => selectIssue('__total__', totalBtn);
-  container.appendChild(totalBtn);
-}
-
-function rebuildTabs() {
-  buildTabs();
 }
 
 function selectIssue(issue, btn) {
-  if (issue !== '__total__' && !ISSUES[issue]) return;
-  if (issue === '__total__' && Object.keys(ISSUES).length === 0) return;
+  if (!ISSUES[issue]) return;
   currentIssue = issue;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  // AI解説をリセット
-  document.getElementById('aiInsightBody').textContent = '「解説を生成」ボタンを押すと、現在表示中のデータをAIが分析してわかりやすく解説します。';
   renderAll();
-}
-
-// ====== 合計データ生成 ======
-function calcTotalData() {
-  const allIssues = Object.values(ISSUES);
-  if (allIssues.length === 0) return null;
-  const merged = {
-    total: 0,
-    gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {}, byGender: {}
-  };
-  const mergeObj = (target, src) => {
-    Object.entries(src).forEach(([k, v]) => { target[k] = (target[k] || 0) + v; });
-  };
-  const mergeGenderBucket = (g, srcBucket) => {
-    if (!merged.byGender[g]) merged.byGender[g] = { total: 0, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
-    const t = merged.byGender[g];
-    t.total += srcBucket.total || 0;
-    mergeObj(t.location, srcBucket.location || {});
-    mergeObj(t.age, srcBucket.age || {});
-    mergeObj(t.purpose, srcBucket.purpose || {});
-    mergeObj(t.genre, srcBucket.genre || {});
-    mergeObj(t.shopRec, srcBucket.shopRec || {});
-  };
-  allIssues.forEach(d => {
-    merged.total += d.total;
-    mergeObj(merged.gender, d.gender);
-    mergeObj(merged.location, d.location);
-    mergeObj(merged.age, d.age);
-    mergeObj(merged.purpose, d.purpose);
-    mergeObj(merged.genre, d.genre);
-    if (d.shopRec) mergeObj(merged.shopRec, d.shopRec);
-    if (d.byGender) Object.entries(d.byGender).forEach(([g, bucket]) => mergeGenderBucket(g, bucket));
-  });
-  return merged;
-}
-
-// ====== AI グラフ解説（Claude.ai連携方式） ======
-function runAiAnalysis() {
-  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
-  if (!data) return;
-
-  const body = document.getElementById('aiInsightBody');
-
-  const issueLabel = currentIssue === '__total__'
-    ? `全${Object.keys(ISSUES).length}号合計`
-    : currentIssue;
-
-  const gTotal = Object.values(data.gender).reduce((a,b)=>a+b,0);
-  const maleR = gTotal ? Math.round((data.gender['男性']||0)/gTotal*100) : 0;
-  const lTotal = Object.values(data.location).reduce((a,b)=>a+b,0);
-  const localR = lTotal ? Math.round((data.location['札幌市内']||0)/lTotal*100) : 0;
-  const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
-  const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-';
-  const topGenres = Object.entries(data.genre).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}(${v}件)`).join('、');
-  const ageDetail = Object.entries(data.age).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
-  const purposeDetail = Object.entries(data.purpose).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
-  const genreDetail = Object.entries(data.genre).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、');
-  const shopRecDetail = data.shopRec && Object.keys(data.shopRec).length > 0
-    ? Object.entries(data.shopRec).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}件`).join('、')
-    : '（今号は未集計）';
-
-  const promptText = `あなたはフリーペーパーのマーケティングアナリストです。以下はすすきのエリアのフリーペーパー「FREEC」の読者アンケート集計データ（${issueLabel}）です。
-
-【基本データ】
-- 総回答数: ${data.total}件
-- 男女比: 男性${maleR}% / 女性${100-maleR}%
-- 居住地: 札幌市内${localR}%、その他${100-localR}%
-
-【年代内訳】${ageDetail}
-【来訪目的】${purposeDetail}
-【よく行くジャンル】${genreDetail}
-【掲載店舗で行ってみて良かったお店（6月号〜）】${shopRecDetail}
-
-このデータから読み取れる読者層の特徴、注目すべきポイント、広告出稿や編集方針へのヒントを、3〜4文の日本語で簡潔にわかりやすく解説してください。マーケティング担当者が即座に活用できるような、具体的で前向きなコメントをお願いします。`;
-
-  // クリップボードにコピー
-  navigator.clipboard.writeText(promptText).then(() => {
-    body.className = 'ai-insight-body';
-    body.innerHTML = `
-      <div style="background:#1a2a1a;border:1px solid #27ae6066;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
-        <div style="color:#27ae60;font-weight:700;margin-bottom:6px;">✅ 分析プロンプトをコピーしました！</div>
-        <div style="color:#aaa;font-size:12px;line-height:1.7;">
-          ① 下の「Claude.aiで解析する」ボタンを押してください<br>
-          ② Claude.aiが開いたら、入力欄に <strong style="color:#e8b84b;">Ctrl+V（貼り付け）</strong> してEnterを押すだけです<br>
-          ③ AIの解説が表示されたら、この欄にコピペしてご利用ください
-        </div>
-      </div>
-      <a href="https://claude.ai/new" target="_blank" style="display:inline-block;background:#e8b84b;color:#000;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none;">🤖 Claude.aiで解析する →</a>
-    `;
-  }).catch(() => {
-    // クリップボードAPIが使えない場合はテキストエリアで表示
-    body.className = 'ai-insight-body';
-    body.innerHTML = `
-      <div style="color:#e8b84b;font-weight:700;margin-bottom:8px;">📋 以下のテキストをコピーしてClaude.aiに貼り付けてください</div>
-      <textarea readonly style="width:100%;height:120px;background:#111;border:1px solid #333;border-radius:6px;color:#ccc;font-size:11px;padding:8px;resize:none;font-family:'Noto Sans JP',sans-serif;" onclick="this.select()">${promptText}</textarea>
-      <a href="https://claude.ai/new" target="_blank" style="display:inline-block;margin-top:10px;background:#e8b84b;color:#000;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;text-decoration:none;">🤖 Claude.aiで解析する →</a>
-    `;
-  });
 }
 
 // ====== KPI ======
 function renderKPI(data) {
   const row = document.getElementById('kpiRow');
   const genderTotal = Object.values(data.gender).reduce((a,b)=>a+b,0);
-  const maleRate = genderTotal ? Math.round(data.gender['男性'] / genderTotal * 100) : 0;
-  const locTotal = Object.values(data.location).reduce((a,b)=>a+b,0);
-  const localRate = locTotal ? Math.round((data.location['札幌市内'] || 0) / locTotal * 100) : 0;
+  const maleRate = Math.round(data.gender['男性'] / genderTotal * 100);
+  const localRate = Math.round((data.location['札幌市内'] || 0) / Object.values(data.location).reduce((a,b)=>a+b,0) * 100);
   const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
   const topPurpose = Object.entries(data.purpose).sort((a,b)=>b[1]-a[1])[0][0];
 
@@ -873,9 +448,13 @@ function pct(value, data) {
   return total > 0 ? Math.round(value / total * 100) : 0;
 }
 
+// ====== グラフ共通設定 ======
 const commonTooltip = {
-  backgroundColor: '#1e1e1e', borderColor: '#333', borderWidth: 1,
-  titleColor: '#e8b84b', bodyColor: '#ccc',
+  backgroundColor: '#1e1e1e',
+  borderColor: '#333',
+  borderWidth: 1,
+  titleColor: '#e8b84b',
+  bodyColor: '#ccc',
   callbacks: {
     label: ctx => {
       const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
@@ -889,26 +468,33 @@ function destroyChart(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
 }
 
+// ====== グラフ描画 ======
 function renderGender(data) {
   destroyChart('gender');
-  // 男性・女性ともに固定順・固定色（男性=青、女性=ピンク）
-  const GENDER_ORDER = ['男性', '女性'];
-  const GENDER_COLORS = { '男性': PALETTE.blue, '女性': PALETTE.pink };
-  const labels = GENDER_ORDER.filter(k => data.gender[k] !== undefined);
-  const values = labels.map(k => data.gender[k] || 0);
-  const bgColors = labels.map(k => GENDER_COLORS[k]);
+  const labels = Object.keys(data.gender).filter(k => data.gender[k] > 0);
+  const values = labels.map(k => data.gender[k]);
   charts.gender = new Chart(document.getElementById('genderChart'), {
     type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: bgColors, borderWidth: 0 }] },
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: [PALETTE.blue, PALETTE.pink], borderWidth: 0 }]
+    },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '55%',
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '55%',
       plugins: {
         legend: { labels: { color: '#ccc', font: { family: 'Noto Sans JP', size: 11 }, padding: 12, boxWidth: 12 } },
         tooltip: commonTooltip,
         datalabels: {
-          color: '#fff', font: { family: 'Noto Sans JP', size: 12, weight: 'bold' },
-          formatter: (value, ctx) => { const p = pct(value, ctx.dataset.data); return p > 0 ? `${value}件\n${p}%` : ''; },
-          textAlign: 'center', display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
+          color: '#fff',
+          font: { family: 'Noto Sans JP', size: 12, weight: 'bold' },
+          formatter: (value, ctx) => {
+            const p = pct(value, ctx.dataset.data);
+            return p > 0 ? `${value}件\n${p}%` : '';
+          },
+          textAlign: 'center',
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
         }
       }
     }
@@ -922,26 +508,39 @@ function renderLocation(data) {
   const values = entries.map(([,v]) => v);
   charts.location = new Chart(document.getElementById('locationChart'), {
     type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: [PALETTE.accent, PALETTE.green, PALETTE.orange, PALETTE.purple], borderWidth: 0 }] },
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: [PALETTE.accent, PALETTE.green, PALETTE.orange, PALETTE.purple], borderWidth: 0 }]
+    },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '55%',
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '55%',
       plugins: {
         legend: { labels: { color: '#ccc', font: { family: 'Noto Sans JP', size: 11 }, padding: 12, boxWidth: 12 } },
         tooltip: commonTooltip,
         datalabels: {
-          color: '#fff', font: { family: 'Noto Sans JP', size: 11, weight: 'bold' },
-          formatter: (value, ctx) => { const p = pct(value, ctx.dataset.data); return p > 0 ? `${value}件\n${p}%` : ''; },
-          textAlign: 'center', display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
+          color: '#fff',
+          font: { family: 'Noto Sans JP', size: 11, weight: 'bold' },
+          formatter: (value, ctx) => {
+            const p = pct(value, ctx.dataset.data);
+            return p > 0 ? `${value}件\n${p}%` : '';
+          },
+          textAlign: 'center',
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
         }
       }
     }
   });
 }
 
-function makeBarDatalabels() {
+function makeBarDatalabels(values, anchor, align, offsetVal) {
   return {
-    color: '#eee', font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
-    anchor: 'end', align: 'end', offset: 4,
+    color: '#eee',
+    font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
+    anchor: anchor || 'end',
+    align: align || 'end',
+    offset: offsetVal !== undefined ? offsetVal : 4,
     formatter: (value, ctx) => {
       if (!value) return '';
       const p = pct(value, ctx.dataset.data);
@@ -953,17 +552,30 @@ function makeBarDatalabels() {
 
 function renderAge(data) {
   destroyChart('age');
-  // 固定順（若い順）・0件も含めて全表示・固定色
-  const labels = AGE_MASTER;
-  const values = labels.map(k => data.age[k] || 0);
-  const maxVal = Math.max(...values, 1);
+  const labels = Object.keys(data.age);
+  const values = Object.values(data.age);
+  const maxVal = Math.max(...values);
   charts.age = new Chart(document.getElementById('ageChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(k => (AGE_COLORS_FIXED[k] || '#888') + 'cc'), borderColor: labels.map(k => AGE_COLORS_FIXED[k] || '#888'), borderWidth: 1, borderRadius: 6 }] },
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'),
+        borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       layout: { padding: { top: 28 } },
-      plugins: { legend: { display: false }, tooltip: commonTooltip, datalabels: makeBarDatalabels() },
+      plugins: {
+        legend: { display: false },
+        tooltip: commonTooltip,
+        datalabels: makeBarDatalabels(values)
+      },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { display: false } },
         y: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.3) }
@@ -974,19 +586,43 @@ function renderAge(data) {
 
 function renderPurpose(data) {
   destroyChart('purpose');
-  // 固定マスタ順・0件も全表示
-  const labels = PURPOSE_MASTER;
-  const values = labels.map(k => data.purpose[k] || 0);
-  const maxVal = Math.max(...values, 1);
+  const entries = Object.entries(data.purpose).filter(([,v]) => v > 0);
+  const labels = entries.map(([k]) => k);
+  const values = entries.map(([,v]) => v);
+  const maxVal = Math.max(...values);
   charts.purpose = new Chart(document.getElementById('purposeChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: PALETTE.teal + 'cc', borderColor: PALETTE.teal, borderWidth: 1, borderRadius: 6 }] },
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: PALETTE.teal + 'cc',
+        borderColor: PALETTE.teal,
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
     options: {
-      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
       layout: { padding: { right: 90 } },
       plugins: {
-        legend: { display: false }, tooltip: commonTooltip,
-        datalabels: { color: '#eee', font: { family: 'Noto Sans JP', size: 10, weight: 'bold' }, anchor: 'end', align: 'end', offset: 4, formatter: (value, ctx) => { if (!value) return ''; const p = pct(value, ctx.dataset.data); return `${value}件 (${p}%)`; }, display: ctx => ctx.dataset.data[ctx.dataIndex] > 0 }
+        legend: { display: false },
+        tooltip: commonTooltip,
+        datalabels: {
+          color: '#eee',
+          font: { family: 'Noto Sans JP', size: 10, weight: 'bold' },
+          anchor: 'end',
+          align: 'end',
+          offset: 4,
+          formatter: (value, ctx) => {
+            if (!value) return '';
+            const p = pct(value, ctx.dataset.data);
+            return `${value}件 (${p}%)`;
+          },
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0
+        }
       },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 10 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.5) },
@@ -998,17 +634,31 @@ function renderPurpose(data) {
 
 function renderGenre(data) {
   destroyChart('genre');
-  // 固定マスタ順・固定色・0件も全表示
-  const labels = GENRE_MASTER;
-  const values = labels.map(k => data.genre[k] || 0);
-  const maxVal = Math.max(...values, 1);
+  const entries = Object.entries(data.genre).filter(([,v]) => v > 0).sort((a,b)=>b[1]-a[1]);
+  const labels = entries.map(([k]) => k);
+  const values = entries.map(([,v]) => v);
+  const maxVal = Math.max(...values);
   charts.genre = new Chart(document.getElementById('genreChart'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(k => (GENRE_COLORS_FIXED[k] || '#888') + 'cc'), borderColor: labels.map(k => GENRE_COLORS_FIXED[k] || '#888'), borderWidth: 1, borderRadius: 6 }] },
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc'),
+        borderColor: labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       layout: { padding: { top: 30 } },
-      plugins: { legend: { display: false }, tooltip: commonTooltip, datalabels: makeBarDatalabels() },
+      plugins: {
+        legend: { display: false },
+        tooltip: commonTooltip,
+        datalabels: makeBarDatalabels(values)
+      },
       scales: {
         x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { display: false } },
         y: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.3) }
@@ -1017,530 +667,20 @@ function renderGenre(data) {
   });
 }
 
+// ====== まとめて描画 ======
 function renderAll() {
-  let data;
-  if (currentIssue === '__total__') {
-    data = calcTotalData();
-    document.getElementById('sourceNote').textContent =
-      `全${Object.keys(ISSUES).length}号合計　|　総回答数 ${data?.total || 0}件　|　${new Date().toLocaleString('ja-JP')}`;
-  } else {
-    data = ISSUES[currentIssue];
-    document.getElementById('sourceNote').textContent =
-      `${currentIssue}　|　回答数 ${data?.total || 0}件　|　${new Date().toLocaleString('ja-JP')}`;
-  }
-  if (!data) return;
+  const data = ISSUES[currentIssue];
   renderKPI(data);
   renderGender(data);
   renderLocation(data);
   renderAge(data);
   renderPurpose(data);
   renderGenre(data);
-  renderAgeBreakdown(data);
-  renderPurposeBreakdown(data);
-  renderGenreBreakdown(data);
-  renderShopRec(data);
-  renderShopRecBreakdown(data);
   document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
 }
 
-// ====== 年代別回答リスト ======
-let currentAgeFilter = 'all';
-
-function setAgeFilter(filter, btn) {
-  currentAgeFilter = filter;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
-  if (data) renderAgeBreakdown(data);
-}
-
-function renderAgeBreakdown(data) {
-  const container = document.getElementById('ageBreakdownBody');
-  if (!container) return;
-
-  // 固定マスタ順・0件も含めて全表示
-  const ageEntries = AGE_MASTER.map(age => [age, data.age[age] || 0]);
-  const total = ageEntries.reduce((s, [, v]) => s + v, 0);
-  const maxVal = Math.max(...ageEntries.map(([, v]) => v), 1);
-
-  const AGE_COLORS = AGE_COLORS_FIXED;
-
-  // トップジャンルを取得（全体比率から上位2件）
-  const topGenres = Object.entries(data.genre)
-    .filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 2)
-    .map(([g]) => g);
-
-  if (currentAgeFilter === 'all') {
-    // シンプルな全体リスト（トップジャンルタグ付き）
-    const rows = ageEntries.map(([age, count]) => {
-      const pct = total > 0 ? Math.round(count / total * 100) : 0;
-      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-      const color = AGE_COLORS[age] || '#888';
-      const genreTags = topGenres.map((g, i) => {
-        const tagColor = i === 0 ? '#e8b84b' : '#16a085';
-        return `<span style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:${tagColor}22;color:${tagColor};border:1px solid ${tagColor}44;">▶ ${g}</span>`;
-      }).join('');
-      return `
-        <tr>
-          <td><span class="age-label">${age}</span></td>
-          <td class="bar-cell">
-            <div class="mini-bar-wrap">
-              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-            </div>
-          </td>
-          <td class="right"><span class="pct-badge">${pct}%</span></td>
-          <td class="right" style="color:var(--muted);">${count}件</td>
-          <td>${genreTags}</td>
-        </tr>`;
-    }).join('');
-
-    container.innerHTML = `
-      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ よく行くジャンルは全体の上位2ジャンルを参考表示</div>
-      <table class="age-breakdown-table">
-        <thead>
-          <tr>
-            <th>年代</th>
-            <th class="bar-cell">割合</th>
-            <th class="right">%</th>
-            <th class="right">回答数</th>
-            <th>よく行くジャンル</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-
-  } else if (currentAgeFilter === 'gender') {
-    // 実データ（byGender）があればそれを使用。無ければ全体比率から按分した参考値にフォールバック
-    const hasReal = data.byGender && (data.byGender['男性'] || data.byGender['女性']);
-    const gTotal = Object.values(data.gender).reduce((a, b) => a + b, 0);
-    const maleRate = gTotal > 0 ? (data.gender['男性'] || 0) / gTotal : 0.5;
-
-    const rows = ageEntries.map(([age, count]) => {
-      const pct = total > 0 ? Math.round(count / total * 100) : 0;
-      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-      const color = AGE_COLORS[age] || '#888';
-      let maleCount, femaleCount;
-      if (hasReal) {
-        maleCount = (data.byGender['男性']?.age?.[age]) || 0;
-        femaleCount = (data.byGender['女性']?.age?.[age]) || 0;
-      } else {
-        maleCount = Math.round(count * maleRate);
-        femaleCount = count - maleCount;
-      }
-      return `
-        <tr>
-          <td><span class="age-label">${age}</span></td>
-          <td class="bar-cell">
-            <div class="mini-bar-wrap">
-              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-            </div>
-          </td>
-          <td class="right"><span class="pct-badge">${pct}%</span></td>
-          <td class="right" style="color:#2980b9;">♂ ${maleCount}件</td>
-          <td class="right" style="color:#e91e63;">♀ ${femaleCount}件</td>
-        </tr>`;
-    }).join('');
-
-    container.innerHTML = `
-      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${hasReal ? '※ 回答データから実際の男女別件数を集計' : '※ 性別のクロスデータが未取得のため、全体の男女比率をもとにした参考値'}</div>
-      <table class="age-breakdown-table">
-        <thead>
-          <tr>
-            <th>年代</th>
-            <th class="bar-cell">割合</th>
-            <th class="right">%</th>
-            <th class="right" style="color:#2980b9;">男性</th>
-            <th class="right" style="color:#e91e63;">女性</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-
-  } else if (currentAgeFilter === 'location') {
-    // 居住地別（同様に全体比率按分）
-    const locTotal = Object.values(data.location).reduce((a, b) => a + b, 0);
-    const localRate = locTotal > 0 ? (data.location['札幌市内'] || 0) / locTotal : 0;
-    const outerRate = locTotal > 0 ? (data.location['札幌市外（道内）'] || 0) / locTotal : 0;
-    const otherRate = 1 - localRate - outerRate;
-
-    const rows = ageEntries.map(([age, count]) => {
-      const pct = total > 0 ? Math.round(count / total * 100) : 0;
-      const localEst = Math.round(count * localRate);
-      const outerEst = Math.round(count * outerRate);
-      const otherEst = count - localEst - outerEst;
-      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-      const color = AGE_COLORS[age] || '#888';
-      return `
-        <tr>
-          <td><span class="age-label">${age}</span></td>
-          <td class="bar-cell">
-            <div class="mini-bar-wrap">
-              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-            </div>
-          </td>
-          <td class="right"><span class="pct-badge">${pct}%</span></td>
-          <td class="right" style="color:#e8b84b;">市内 ${localEst}件</td>
-          <td class="right" style="color:#27ae60;">道内 ${outerEst}件</td>
-          <td class="right" style="color:var(--muted);">その他 ${otherEst}件</td>
-        </tr>`;
-    }).join('');
-
-    container.innerHTML = `
-      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の居住地比率をもとにした参考値</div>
-      <table class="age-breakdown-table">
-        <thead>
-          <tr>
-            <th>年代</th>
-            <th class="bar-cell">割合</th>
-            <th class="right">%</th>
-            <th class="right" style="color:#e8b84b;">札幌市内</th>
-            <th class="right" style="color:#27ae60;">道内</th>
-            <th class="right" style="color:var(--muted);">その他</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-
-  } else if (currentAgeFilter === 'purpose') {
-    // 来訪目的別：主な2目的を按分
-    const purpEntries = Object.entries(data.purpose).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    const purpTotal = purpEntries.reduce((s,[,v])=>s+v,0);
-    const top1 = purpEntries[0] || ['—', 0];
-    const top2 = purpEntries[1] || ['—', 0];
-    const top1Rate = purpTotal > 0 ? top1[1] / purpTotal : 0;
-    const top2Rate = purpTotal > 0 ? top2[1] / purpTotal : 0;
-
-    const rows = ageEntries.map(([age, count]) => {
-      const pct = total > 0 ? Math.round(count / total * 100) : 0;
-      const top1Est = Math.round(count * top1Rate);
-      const top2Est = Math.round(count * top2Rate);
-      const otherEst = count - top1Est - top2Est;
-      const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-      const color = AGE_COLORS[age] || '#888';
-      return `
-        <tr>
-          <td><span class="age-label">${age}</span></td>
-          <td class="bar-cell">
-            <div class="mini-bar-wrap">
-              <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-            </div>
-          </td>
-          <td class="right"><span class="pct-badge">${pct}%</span></td>
-          <td class="right" style="color:#e8b84b;">${top1[0]} ${top1Est}件</td>
-          <td class="right" style="color:#16a085;">${top2[0]} ${top2Est}件</td>
-          <td class="right" style="color:var(--muted);">他 ${otherEst}件</td>
-        </tr>`;
-    }).join('');
-
-    container.innerHTML = `
-      <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">※ 全体の来訪目的比率をもとにした参考値　上位2目的を表示</div>
-      <table class="age-breakdown-table">
-        <thead>
-          <tr>
-            <th>年代</th>
-            <th class="bar-cell">割合</th>
-            <th class="right">%</th>
-            <th class="right" style="color:#e8b84b;">${top1[0]}</th>
-            <th class="right" style="color:#16a085;">${top2[0]}</th>
-            <th class="right" style="color:var(--muted);">その他</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
-}
-
-// ====== 来訪目的別回答リスト ======
-let currentPurposeFilter = 'all';
-
-function setPurposeFilter(filter, btn) {
-  currentPurposeFilter = filter;
-  document.querySelectorAll('#purposeFilterRow .filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
-  if (data) renderPurposeBreakdown(data);
-}
-
-function renderPurposeBreakdown(data) {
-  const container = document.getElementById('purposeBreakdownBody');
-  if (!container) return;
-
-  const isGenderView = currentPurposeFilter === 'male' || currentPurposeFilter === 'female';
-  const genderKey = currentPurposeFilter === 'male' ? '男性' : '女性';
-  const srcPurpose = isGenderView ? (data.byGender?.[genderKey]?.purpose || {}) : data.purpose;
-  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
-
-  const entries = PURPOSE_MASTER.map(p => [p, srcPurpose[p] || 0]).sort((a, b) => b[1] - a[1]);
-  const total = Object.values(srcPurpose).reduce((s, v) => s + v, 0);
-  const maxVal = Math.max(...entries.map(([, v]) => v), 1);
-  const accentColor = currentPurposeFilter === 'male' ? '#2980b9' : currentPurposeFilter === 'female' ? '#e91e63' : PALETTE.teal;
-
-  const rows = entries.map(([purpose, count], i) => {
-    const pct = total > 0 ? Math.round(count / total * 100) : 0;
-    const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    return `
-      <tr>
-        <td style="width:32px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;">${i + 1}</td>
-        <td><span class="age-label" style="color:${accentColor};">${purpose}</span></td>
-        <td class="bar-cell">
-          <div class="mini-bar-wrap">
-            <div class="mini-bar" style="width:${barPct}%; background:${accentColor};"></div>
-          </div>
-        </td>
-        <td class="right"><span class="pct-badge" style="color:${accentColor};background:${accentColor}22;">${pct}%</span></td>
-        <td class="right" style="color:var(--muted);">${count}件</td>
-      </tr>`;
-  }).join('');
-
-  const noteHtml = isGenderView
-    ? (hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`)
-    : '';
-
-  container.innerHTML = `
-    ${noteHtml ? `<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${noteHtml}</div>` : ''}
-    <table class="age-breakdown-table">
-      <thead>
-        <tr>
-          <th style="width:32px;">#</th>
-          <th>目的</th>
-          <th class="bar-cell">割合</th>
-          <th class="right">%</th>
-          <th class="right">回答数</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
-
-// ====== ジャンル別回答リスト ======
-let currentGenreFilter = 'all';
-
-function setGenreFilter(filter, btn) {
-  currentGenreFilter = filter;
-  document.querySelectorAll('#genreFilterRow .filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
-  if (data) renderGenreBreakdown(data);
-}
-
-function renderGenreBreakdown(data) {
-  const container = document.getElementById('genreBreakdownBody');
-  if (!container) return;
-
-  const isGenderView = currentGenreFilter === 'male' || currentGenreFilter === 'female';
-  const genderKey = currentGenreFilter === 'male' ? '男性' : '女性';
-  const srcGenre = isGenderView ? (data.byGender?.[genderKey]?.genre || {}) : data.genre;
-  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
-
-  // 固定マスタ順ベース、0件も含めて全表示
-  let entries = GENRE_MASTER.map(g => [g, srcGenre[g] || 0]);
-
-  if (currentGenreFilter === 'asc') {
-    entries.sort((a, b) => a[1] - b[1]);
-  } else {
-    entries.sort((a, b) => b[1] - a[1]);
-  }
-
-  if (currentGenreFilter === 'top5') {
-    entries = entries.slice(0, 5);
-  }
-
-  const total = Object.values(srcGenre).reduce((s, v) => s + v, 0);
-  const maxVal = Math.max(...entries.map(([, v]) => v), 1);
-  const accentColor = currentGenreFilter === 'male' ? '#2980b9' : currentGenreFilter === 'female' ? '#e91e63' : null;
-
-  const rows = entries.map(([genre, count], i) => {
-    const pct = total > 0 ? Math.round(count / total * 100) : 0;
-    const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    const color = accentColor || GENRE_COLORS_FIXED[genre] || MULTI_COLORS[i % MULTI_COLORS.length];
-    const rank = currentGenreFilter === 'asc'
-      ? entries.length - i
-      : i + 1;
-    return `
-      <tr>
-        <td style="width:32px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;">${rank}</td>
-        <td><span class="age-label" style="color:${color};">${genre}</span></td>
-        <td class="bar-cell">
-          <div class="mini-bar-wrap">
-            <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-          </div>
-        </td>
-        <td class="right"><span class="pct-badge" style="color:${color};background:${color}22;">${pct}%</span></td>
-        <td class="right" style="color:var(--muted);">${count}件</td>
-      </tr>`;
-  }).join('');
-
-  const noteHtml = isGenderView
-    ? `<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`}</div>`
-    : '';
-
-  container.innerHTML = `
-    ${noteHtml}
-    <table class="age-breakdown-table">
-      <thead>
-        <tr>
-          <th style="width:32px;">#</th>
-          <th>ジャンル</th>
-          <th class="bar-cell">割合</th>
-          <th class="right">%</th>
-          <th class="right">回答数</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
-
-
-// ====== 行ってみて良かったお店チャート ======
-function renderShopRec(data) {
-  const section = document.getElementById('shopRecSection');
-  const listSection = document.getElementById('shopRecListSection');
-  const hasData = data.shopRec && Object.keys(data.shopRec).length > 0;
-  if (section) section.style.display = hasData ? '' : 'none';
-  if (listSection) listSection.style.display = hasData ? '' : 'none';
-  if (!hasData) return;
-
-  destroyChart('shopRec');
-  const entries = Object.entries(data.shopRec).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
-  const labels = entries.map(([k]) => k);
-  const values = entries.map(([,v]) => v);
-  const maxVal = Math.max(...values, 1);
-  const bgColors = labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length] + 'cc');
-  const bdColors = labels.map((_, i) => MULTI_COLORS[i % MULTI_COLORS.length]);
-
-  charts.shopRec = new Chart(document.getElementById('shopRecChart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: bgColors, borderColor: bdColors, borderWidth: 1, borderRadius: 6 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 30 } },
-      plugins: { legend: { display: false }, tooltip: commonTooltip, datalabels: makeBarDatalabels() },
-      scales: {
-        x: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 }, maxRotation: 45 }, grid: { display: false } },
-        y: { ticks: { color: '#aaa', font: { family: 'Noto Sans JP', size: 11 } }, grid: { color: '#2a2a2a' }, beginAtZero: true, max: Math.ceil(maxVal * 1.3) }
-      }
-    }
-  });
-}
-
-// ====== 行ってみて良かったお店 回答リスト ======
-let currentShopRecFilter = 'all';
-
-function setShopRecFilter(filter, btn) {
-  currentShopRecFilter = filter;
-  document.querySelectorAll('#shopRecFilterRow .filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  const data = currentIssue === '__total__' ? calcTotalData() : ISSUES[currentIssue];
-  if (data) renderShopRecBreakdown(data);
-}
-
-function renderShopRecBreakdown(data) {
-  const container = document.getElementById('shopRecBreakdownBody');
-  if (!container) return;
-  if (!data.shopRec || Object.keys(data.shopRec).length === 0) return;
-
-  const isGenderView = currentShopRecFilter === 'male' || currentShopRecFilter === 'female';
-  const genderKey = currentShopRecFilter === 'male' ? '男性' : '女性';
-  const srcShopRec = isGenderView ? (data.byGender?.[genderKey]?.shopRec || {}) : data.shopRec;
-  const hasReal = isGenderView && data.byGender && data.byGender[genderKey];
-
-  let entries = Object.entries(srcShopRec).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
-
-  if (currentShopRecFilter === 'asc') {
-    entries.sort((a, b) => a[1] - b[1]);
-  }
-  if (currentShopRecFilter === 'top5') {
-    entries = entries.slice(0, 5);
-  }
-
-  const total = Object.values(srcShopRec).reduce((s, v) => s + v, 0);
-  const maxVal = Math.max(...entries.map(([,v]) => v), 1);
-  const accentColor = currentShopRecFilter === 'male' ? '#2980b9' : currentShopRecFilter === 'female' ? '#e91e63' : null;
-
-  const rows = entries.map(([shop, count], i) => {
-    const p = total > 0 ? Math.round(count / total * 100) : 0;
-    const barPct = maxVal > 0 ? Math.round(count / maxVal * 100) : 0;
-    const color = accentColor || MULTI_COLORS[i % MULTI_COLORS.length];
-    const rank = currentShopRecFilter === 'asc' ? entries.length - i : i + 1;
-    return `
-      <tr>
-        <td style="width:32px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;">${rank}</td>
-        <td><span class="age-label" style="color:${color};">${shop}</span></td>
-        <td class="bar-cell">
-          <div class="mini-bar-wrap">
-            <div class="mini-bar" style="width:${barPct}%; background:${color};"></div>
-          </div>
-        </td>
-        <td class="right"><span class="pct-badge" style="color:${color};background:${color}22;">${p}%</span></td>
-        <td class="right" style="color:var(--muted);">${count}件</td>
-      </tr>`;
-  }).join('');
-
-  const noteHtml = isGenderView
-    ? (hasReal ? `※ ${genderKey}の回答のみを集計（${genderKey}の総回答数 ${data.byGender[genderKey].total}件）` : `※ この号は性別のクロスデータが未取得のため表示できません`)
-    : '※ 複数回答可。回答のあった号のみ表示';
-
-  container.innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">${noteHtml}</div>
-    <table class="age-breakdown-table">
-      <thead>
-        <tr>
-          <th style="width:32px;">#</th>
-          <th>お店名</th>
-          <th class="bar-cell">割合</th>
-          <th class="right">%</th>
-          <th class="right">回答数</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
-
-// フォールバック用デフォルト（issue-urls.jsonが取得できなかった場合のみ使用）
-const ISSUE_URLS_DEFAULT = {
-  "3月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv",
-  "4月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv",
-  "5月号": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9Gi34IZW6mHKnFEuSS82_bk2Ch5jzqVZylGv7l3M47HiVthR3il7aSQXXWVH_cqyYsuxBLVewCt-_/pub?gid=171044816&single=true&output=csv"
-};
-
-// 共有設定ファイル（リポジトリ直下）。全端末はこのファイルを見るので、
-// このファイルを編集してGitHubにコミットすれば、PC/スマホどちらの設定も同じになります。
-const SHARED_CONFIG_URL = 'issue-urls.json';
-
-// 実行中に使う設定（起動時に共有ファイルから読み込んで埋める）
+// ====== 号ごとURL管理 ======
 const ISSUE_URLS = {};
-
-// 共有ファイルを読み込む。取得できない場合はデフォルト値にフォールバック。
-async function loadSharedUrls() {
-  try {
-    const res = await fetch(SHARED_CONFIG_URL + '?_=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    Object.keys(ISSUE_URLS).forEach(k => delete ISSUE_URLS[k]);
-    Object.assign(ISSUE_URLS, ISSUE_URLS_DEFAULT, data);
-  } catch (e) {
-    console.warn('[共有設定] issue-urls.json の取得に失敗したためデフォルト値を使用します: ' + e.message);
-    Object.assign(ISSUE_URLS, ISSUE_URLS_DEFAULT);
-  }
-}
-
-// ISSUE_URLSの現在の中身を、issue-urls.jsonにそのまま貼り付けられる形で表示する
-function showSyncHelper() {
-  const box = document.getElementById('syncHelperBox');
-  const ta  = document.getElementById('syncHelperText');
-  if (!box || !ta) return;
-  ta.value = JSON.stringify(ISSUE_URLS, null, 2);
-  box.style.display = 'block';
-}
-
-function copySyncHelper() {
-  const ta = document.getElementById('syncHelperText');
-  ta.select();
-  document.execCommand('copy');
-  alert('コピーしました。GitHubの issue-urls.json を開いて、この内容に貼り替えてコミットしてください。\n（コミットすると、他の端末にも最大5分以内に反映されます）');
-}
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
@@ -1577,7 +717,6 @@ async function addIssueUrl() {
   document.getElementById('newIssueName').value = '';
   document.getElementById('newIssueUrl').value  = '';
   renderUrlList();
-  showSyncHelper();
   await loadIssueFromUrl(issue, url);
 }
 
@@ -1591,7 +730,6 @@ function removeIssue(issue) {
   delete ISSUE_URLS[issue];
   delete ISSUES[issue];
   renderUrlList();
-  showSyncHelper();
   rebuildTabs();
   const remaining = Object.keys(ISSUES);
   if (remaining.length > 0) {
@@ -1601,13 +739,22 @@ function removeIssue(issue) {
 }
 
 // ====== CSV解析 ======
-async function loadIssueFromUrl(issueName, url, silent = false) {
+async function loadIssueFromUrl(issueName, url) {
+  // URLの形式チェック
+  if (!url.includes('output=csv')) {
+    alert(`⚠️ ${issueName} のURLが正しくありません。\n\nURLの末尾に「output=csv」が含まれていません。\n\n【正しい取得手順】\n① スプレッドシートを開く\n② ファイル → 共有 → ウェブに公開\n③ 左のプルダウンを「フォームの回答1」に変更\n④ 右のプルダウンを「カンマ区切り形式（.csv）」に変更\n⑤ 公開 → URLをコピー`);
+    return false;
+  }
+
   try {
-    // キャッシュ回避のためタイムスタンプを付与し、no-storeでブラウザキャッシュを無効化
-    const noCacheUrl = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
-    const res = await fetch(noCacheUrl, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`サーバーエラー (HTTP ${res.status})\nスプレッドシートが公開されているか確認してください`);
     const text = await res.text();
+
+    // HTMLが返ってきていないかチェック（CSVではなくエラーページの場合）
+    if (text.trim().startsWith('<!')) {
+      throw new Error('CSVデータを取得できませんでした\n\nスプレッドシートの「ウェブに公開」設定でCSV形式を選んでいるか確認してください');
+    }
 
     function parseCSVRow(line) {
       const result = [];
@@ -1623,62 +770,39 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
     }
 
     const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('データが不足しています');
+    if (lines.length < 2) throw new Error('データが不足しています\n回答がまだ0件の可能性があります');
 
     const headers = parseCSVRow(lines[0]);
     const idxGender  = headers.findIndex(h => h.includes('性別'));
-    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住'));
+    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住') || h.includes('お住まい'));
     const idxAge     = headers.findIndex(h => h.includes('年代'));
     const idxPurpose = headers.findIndex(h => h.includes('目的'));
     const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
-    const idxShopRec = headers.findIndex(h => h.includes('行ってみて良かったお店')); // 列位置に依存せず見出し文字列で自動検出
+
+    // ヘッダーが見つからない場合の警告
+    const missing = [];
+    if (idxGender < 0)  missing.push('性別');
+    if (idxLoc < 0)     missing.push('居住地');
+    if (idxAge < 0)     missing.push('年代');
+    if (idxPurpose < 0) missing.push('目的');
+    if (idxGenre < 0)   missing.push('ジャンル');
+    if (missing.length === 5) {
+      throw new Error(`列が一つも見つかりませんでした\n取得したヘッダー: ${headers.slice(0,5).join(' / ')}\n\n「フォームの回答」シートを選んでCSV公開しているか確認してください`);
+    }
 
     const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
-    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {}, byGender: {} };
-
-    // 性別ごとの集計バケツを用意（実際にシートに出てくる性別の値ごとに自動生成）
-    function genderBucket(g) {
-      if (!newData.byGender[g]) {
-        newData.byGender[g] = { total: 0, location: {}, age: {}, purpose: {}, genre: {}, shopRec: {} };
-      }
-      return newData.byGender[g];
-    }
+    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
 
     dataRows.forEach(row => {
       const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
-      const genderVal = idxGender >= 0 ? (row[idxGender] || '').trim() : '';
-      const gb = genderVal ? genderBucket(genderVal) : null;
-      if (gb) gb.total++;
-
       if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
-      if (idxLoc >= 0) {
-        count(newData.location, row[idxLoc]);
-        if (gb) count(gb.location, row[idxLoc]);
-      }
-      if (idxAge >= 0) {
-        count(newData.age, row[idxAge]);
-        if (gb) count(gb.age, row[idxAge]);
-      }
-      if (idxPurpose >= 0) {
-        count(newData.purpose, row[idxPurpose]);
-        if (gb) count(gb.purpose, row[idxPurpose]);
-      }
+      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
+      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
+      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
       if (idxGenre >= 0) {
         row[idxGenre].split(/[,、]/).forEach(g => {
           const g2 = g.replace(/^"|"$/g,'').trim();
-          if (g2) {
-            newData.genre[g2] = (newData.genre[g2] || 0) + 1;
-            if (gb) gb.genre[g2] = (gb.genre[g2] || 0) + 1;
-          }
-        });
-      }
-      if (idxShopRec >= 0 && row[idxShopRec]) {
-        row[idxShopRec].split(/[,、]/).forEach(s => {
-          const s2 = s.replace(/^"|"$/g,'').trim();
-          if (s2) {
-            newData.shopRec[s2] = (newData.shopRec[s2] || 0) + 1;
-            if (gb) gb.shopRec[s2] = (gb.shopRec[s2] || 0) + 1;
-          }
+          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
         });
       }
     });
@@ -1692,192 +816,45 @@ async function loadIssueFromUrl(issueName, url, silent = false) {
     renderAll();
     document.getElementById('sourceNote').textContent =
       `${issueName} Googleフォーム連携　|　回答数 ${newData.total}件　|　${new Date().toLocaleString('ja-JP')} 取得`;
-    // AI解説をリセット
-    document.getElementById('aiInsightBody').textContent = '「解説を生成」ボタンを押すと、現在表示中のデータをAIが分析してわかりやすく解説します。';
+    alert(`✅ ${issueName} を読み込みました！\n回答数: ${newData.total}件`);
     return true;
   } catch(e) {
-    if (!silent) {
-      alert(`⚠️ ${issueName} の読み込みに失敗しました。\nURLとスプレッドシートの公開設定を確認してください。\n\nエラー: ${e.message}`);
-    } else {
-      console.warn('[自動] ' + issueName + ': ' + e.message);
-    }
+    alert(`⚠️ ${issueName} の読み込みに失敗しました。\n\n${e.message}`);
     return false;
   }
 }
 
-// ====== PDF出力 ======
-async function exportPDF() {
-  const loadedIssues = Object.keys(ISSUES);
-  if (loadedIssues.length === 0) {
-    alert('データが読み込まれていません。先にGoogleスプレッドシートを連携してください。');
-    return;
-  }
-
-  const overlay = document.getElementById('pdf-overlay');
-  const msg = document.getElementById('pdf-msg');
-  overlay.classList.add('active');
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297;
-
-    // ===== 表紙をHTMLで作ってキャプチャ（文字化け防止）=====
-    msg.textContent = '表紙を作成中...';
-
-    const coverEl = document.createElement('div');
-    coverEl.style.cssText = `
-      width:794px; min-height:1123px; background:#1a1a1a;
-      font-family:'Noto Sans JP',sans-serif; color:#f0f0f0;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:60px 48px; box-sizing:border-box; position:relative;
-    `;
-
-    // サマリーテーブルの行を生成
-    const tableRows = loadedIssues.map((issue, ri) => {
-      const data = ISSUES[issue];
-      const gt = Object.values(data.gender).reduce((a,b)=>a+b,0);
-      const maleR = gt ? Math.round(data.gender['男性']/gt*100) : 0;
-      const lt = Object.values(data.location).reduce((a,b)=>a+b,0);
-      const localR = lt ? Math.round((data.location['札幌市内']||0)/lt*100) : 0;
-      const topAge = Object.entries(data.age).sort((a,b)=>b[1]-a[1])[0][0];
-      const bg = ri % 2 === 0 ? '#2a2a2a' : '#222';
-      return `<tr style="background:${bg}">
-        <td style="padding:10px 14px;color:#e8b84b;font-weight:700;">${issue}</td>
-        <td style="padding:10px 14px;text-align:center;">${data.total}件</td>
-        <td style="padding:10px 14px;text-align:center;">${maleR}%</td>
-        <td style="padding:10px 14px;text-align:center;">${100-maleR}%</td>
-        <td style="padding:10px 14px;text-align:center;">${localR}%</td>
-        <td style="padding:10px 14px;text-align:center;">${topAge}</td>
-      </tr>`;
-    }).join('');
-
-    coverEl.innerHTML = `
-      <div style="position:absolute;top:0;left:0;right:0;height:6px;background:#e8b84b;"></div>
-      <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:#e8b84b;"></div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:8px;color:#e8b84b;margin-bottom:8px;">FREEC</div>
-      <div style="font-size:18px;color:#aaa;letter-spacing:3px;margin-bottom:40px;">Reader Survey Report</div>
-      <div style="width:100%;height:1px;background:#e8b84b;margin-bottom:32px;"></div>
-      <div style="font-size:26px;font-weight:700;margin-bottom:12px;">読者アンケート集計レポート</div>
-      <div style="font-size:16px;color:#aaa;margin-bottom:48px;">${loadedIssues.join(' ・ ')}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead>
-          <tr style="background:#e8b84b;color:#000;">
-            <th style="padding:12px 14px;text-align:left;">号</th>
-            <th style="padding:12px 14px;">総回答数</th>
-            <th style="padding:12px 14px;">男性比率</th>
-            <th style="padding:12px 14px;">女性比率</th>
-            <th style="padding:12px 14px;">市内率</th>
-            <th style="padding:12px 14px;">最多年代</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-      <div style="position:absolute;bottom:24px;font-size:12px;color:#666;">生成日時: ${new Date().toLocaleString('ja-JP')}</div>
-    `;
-
-    document.body.appendChild(coverEl);
-    await new Promise(r => setTimeout(r, 400));
-
-    const coverCanvas = await html2canvas(coverEl, {
-      scale: 2, backgroundColor: '#1a1a1a', logging: false,
-      width: 794, windowWidth: 794,
-    });
-    document.body.removeChild(coverEl);
-
-    const coverImg = coverCanvas.toDataURL('image/png');
-    const coverH = W * coverCanvas.height / coverCanvas.width;
-    pdf.addImage(coverImg, 'PNG', 0, 0, W, Math.min(coverH, H));
-
-    // ===== 各号ページ（スクリーンショット方式）=====
-    const savedIssue = currentIssue;
-    const target = document.querySelector('.main');
-
-    for (let idx = 0; idx < loadedIssues.length; idx++) {
-      const issue = loadedIssues[idx];
-      msg.textContent = issue + ' をキャプチャ中... (' + (idx + 1) + '/' + loadedIssues.length + ')';
-
-      currentIssue = issue;
-      renderAll();
-      const panel = document.getElementById('settingsPanel');
-      if (panel) panel.style.display = 'none';
-      const banner = document.querySelector('.connect-banner');
-      if (banner) banner.style.display = 'none';
-
-      await new Promise(r => setTimeout(r, 800));
-
-      const canvas = await html2canvas(target, {
-        scale: 2, useCORS: true, backgroundColor: '#0d0d0d',
-        logging: false, windowWidth: 1200,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgAspect = canvas.height / canvas.width;
-      const drawW = W;
-      const drawH = drawW * imgAspect;
-
-      pdf.addPage();
-
-      if (drawH <= H) {
-        pdf.addImage(imgData, 'PNG', 0, 0, drawW, drawH);
-      } else {
-        const totalPages = Math.ceil(drawH / H);
-        for (let p = 0; p < totalPages; p++) {
-          if (p > 0) pdf.addPage();
-          const srcY = (p * H / drawH) * canvas.height;
-          const srcH = Math.min((H / drawH) * canvas.height, canvas.height - srcY);
-          const partCanvas = document.createElement('canvas');
-          partCanvas.width = canvas.width;
-          partCanvas.height = srcH;
-          const ctx = partCanvas.getContext('2d');
-          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-          const partImg = partCanvas.toDataURL('image/png');
-          const partH = (srcH / canvas.height) * drawH;
-          pdf.addImage(partImg, 'PNG', 0, 0, drawW, partH);
-        }
-      }
-
-      if (banner) banner.style.display = '';
-    }
-
-    currentIssue = savedIssue;
-    renderAll();
-
-    msg.textContent = 'PDFを保存中...';
-    const today = new Date().toLocaleDateString('ja-JP').replace(/\//g, '-');
-    pdf.save('FREEC_\u30a2\u30f3\u30b1\u30fc\u30c8\u96c6\u8a08_' + today + '.pdf');
-
-  } catch (e) {
-    alert('PDF生成中にエラーが発生しました: ' + e.message);
-    console.error(e);
-  } finally {
-    overlay.classList.remove('active');
-  }
+// ====== タブ再構築 ======
+function rebuildTabs() {
+  const container = document.getElementById('issueTabs');
+  container.innerHTML = '';
+  const ORDER = ['3月号','4月号','5月号','6月号','7月号','8月号','9月号','10月号','11月号','12月号'];
+  ORDER.forEach(issue => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (issue === currentIssue ? ' active' : '');
+    btn.dataset.issue = issue;
+    const hasLive = !!ISSUE_URLS[issue];
+    btn.textContent = issue + (hasLive ? ' 🔴' : '');
+    if (!ISSUES[issue]) { btn.style.opacity = '0.3'; btn.disabled = true; }
+    btn.onclick = () => selectIssue(issue, btn);
+    container.appendChild(btn);
+  });
 }
 
-// ====== 起動 ======
-window.addEventListener('load', async () => {
-  // 共有設定ファイル(issue-urls.json)を読み込んでからタブを作る
-  await loadSharedUrls();
-  buildTabs();
-  renderAll();
+// ====== 初期化 ======
+buildTabs();
+renderAll();
 
-  // 起動時に全URLを自動読み込み（失敗してもサイレント）
-  for (const [issue, url] of Object.entries(ISSUE_URLS)) {
-    await loadIssueFromUrl(issue, url, true);
+// 5分ごとに全登録URLを自動更新
+setInterval(async () => {
+  const entries = Object.entries(ISSUE_URLS);
+  for (const [issue, url] of entries) {
+    await loadIssueFromUrl(issue, url);
   }
-
-  // 5分ごとに、共有設定ファイルを読み直してから全登録URLを自動更新
-  // → 他の端末でissue-urls.jsonが更新されていれば、ここで自動的に追いつく
-  setInterval(async () => {
-    await loadSharedUrls();
-    buildTabs();
-    for (const [issue, url] of Object.entries(ISSUE_URLS)) {
-      await loadIssueFromUrl(issue, url, true);
-    }
+  if (entries.length === 0) {
     document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
-  }, 5 * 60 * 1000);
-});
+  }
+}, 5 * 60 * 1000);
 </script>
 </body>
 </html>
