@@ -757,26 +757,36 @@ async function loadIssueFromUrlSilent(issueName, url) {
     if (!res.ok) return false;
     const text = await res.text();
     if (text.trim().startsWith('<!')) return false;
-    function parseCSVRow(line) {
-      const result = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else { cur += c; }
+    // 改行を含むフィールドに対応したCSVパーサー
+    function parseCSV(t) {
+      const rows = [];
+      let row = [], cur = '', inQ = false;
+      for (let i = 0; i < t.length; i++) {
+        const c = t[i];
+        if (c === '"') {
+          if (inQ && t[i+1] === '"') { cur += '"'; i++; }
+          else { inQ = !inQ; }
+        } else if (c === ',' && !inQ) {
+          row.push(cur.trim()); cur = '';
+        } else if ((c === '\n' || (c === '\r' && t[i+1] === '\n')) && !inQ) {
+          if (c === '\r') i++;
+          row.push(cur.trim()); cur = '';
+          if (row.some(c => c)) rows.push(row);
+          row = [];
+        } else { cur += c; }
       }
-      result.push(cur.trim());
-      return result;
+      if (cur || row.length) { row.push(cur.trim()); if (row.some(c => c)) rows.push(row); }
+      return rows;
     }
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return false;
-    const headers = parseCSVRow(lines[0]);
+    const rows = parseCSV(text);
+    if (rows.length < 2) return false;
+    const headers = rows[0];
     const idxGender  = headers.findIndex(h => h.includes('性別'));
     const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住') || h.includes('お住まい'));
     const idxAge     = headers.findIndex(h => h.includes('年代'));
     const idxPurpose = headers.findIndex(h => h.includes('目的'));
     const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
+    console.log('[FREEC]', issueName, '列:', {性別:idxGender, 住まい:idxLoc, 年代:idxAge, 目的:idxPurpose, ジャンル:idxGenre}, '総行数:', rows.length);
     if ([idxGender,idxLoc,idxAge,idxPurpose,idxGenre].every(i => i < 0)) return false;
     const dataRows = rows.slice(1);
     const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
