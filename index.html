@@ -778,7 +778,7 @@ async function loadIssueFromUrlSilent(issueName, url) {
     const idxPurpose = headers.findIndex(h => h.includes('目的'));
     const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
     if ([idxGender,idxLoc,idxAge,idxPurpose,idxGenre].every(i => i < 0)) return false;
-    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
+    const dataRows = rows.slice(1);
     const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
     dataRows.forEach(row => {
       const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
@@ -817,23 +817,32 @@ async function loadIssueFromUrl(issueName, url) {
       throw new Error('CSVデータを取得できませんでした\n\nスプレッドシートの「ウェブに公開」設定でCSV形式を選んでいるか確認してください');
     }
 
-    function parseCSVRow(line) {
-      const result = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-        else { cur += c; }
+    // 改行を含むフィールドに対応したCSVパーサー
+    function parseCSV(text) {
+      const rows = [];
+      let row = [], cur = '', inQ = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQ && text[i+1] === '"') { cur += '"'; i++; }
+          else { inQ = !inQ; }
+        } else if (c === ',' && !inQ) {
+          row.push(cur.trim()); cur = '';
+        } else if ((c === '\n' || (c === '\r' && text[i+1] === '\n')) && !inQ) {
+          if (c === '\r') i++;
+          row.push(cur.trim()); cur = '';
+          if (row.some(c => c)) rows.push(row);
+          row = [];
+        } else { cur += c; }
       }
-      result.push(cur.trim());
-      return result;
+      if (cur || row.length) { row.push(cur.trim()); if (row.some(c => c)) rows.push(row); }
+      return rows;
     }
 
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('データが不足しています\n回答がまだ0件の可能性があります');
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error('データが不足しています\n回答がまだ0件の可能性があります');
 
-    const headers = parseCSVRow(lines[0]);
+    const headers = rows[0];
     const idxGender  = headers.findIndex(h => h.includes('性別'));
     const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住') || h.includes('お住まい'));
     const idxAge     = headers.findIndex(h => h.includes('年代'));
@@ -854,7 +863,7 @@ async function loadIssueFromUrl(issueName, url) {
     console.log('CSV列インデックス:', {性別: idxGender, 住まい: idxLoc, 年代: idxAge, 目的: idxPurpose, ジャンル: idxGenre});
     console.log('ヘッダー全列:', headers);
 
-    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
+    const dataRows = rows.slice(1);
     const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
 
     dataRows.forEach(row => {
