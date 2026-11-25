@@ -918,28 +918,23 @@ function rebuildTabs() {
 buildTabs();
 renderAll();
 
-// 起動時に全登録URLを自動読み込み
-(async () => {
+// 全登録URLを読み込む共通関数
+async function loadAllUrls() {
   const entries = Object.entries(ISSUE_URLS);
-  if (entries.length > 0) {
-    document.getElementById('last-updated').textContent = '読み込み中...';
-    for (const [issue, url] of entries) {
-      await loadIssueFromUrlSilent(issue, url);
-    }
-    document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
-  }
-})();
-
-// 5分ごとに全登録URLを自動更新
-setInterval(async () => {
-  const entries = Object.entries(ISSUE_URLS);
+  if (entries.length === 0) return;
+  document.getElementById('last-updated').textContent = '読み込み中...';
   for (const [issue, url] of entries) {
     await loadIssueFromUrlSilent(issue, url);
   }
-  if (entries.length === 0) {
-    document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
-  }
-}, 5 * 60 * 1000);
+  document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
+}
+
+// DOMが完全に読み込まれてから自動読み込み開始
+window.addEventListener('load', () => {
+  loadAllUrls();
+  // 5分ごとに自動更新
+  setInterval(loadAllUrls, 5 * 60 * 1000);
+});
 </script>
 </body>
 </html>
