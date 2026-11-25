@@ -787,8 +787,11 @@ async function loadIssueFromUrl(issueName, url) {
     if (idxPurpose < 0) missing.push('目的');
     if (idxGenre < 0)   missing.push('ジャンル');
     if (missing.length === 5) {
-      throw new Error(`列が一つも見つかりませんでした\n取得したヘッダー: ${headers.slice(0,5).join(' / ')}\n\n「フォームの回答」シートを選んでCSV公開しているか確認してください`);
+      throw new Error(`列が一つも見つかりませんでした\n取得したヘッダー: ${headers.join(' / ')}\n\nヘッダー行の文字数: ${headers.length}列\n\n「フォームの回答1」シートを選んでCSV公開しているか確認してください`);
     }
+    // デバッグ: 見つかった列インデックスをコンソールに出力
+    console.log('CSV列インデックス:', {性別: idxGender, 住まい: idxLoc, 年代: idxAge, 目的: idxPurpose, ジャンル: idxGenre});
+    console.log('ヘッダー全列:', headers);
 
     const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
     const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
