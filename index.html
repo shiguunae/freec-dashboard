@@ -797,7 +797,10 @@ async function loadIssueFromUrlSilent(issueName, url) {
     rebuildTabs();
     if (currentIssue === issueName) renderAll();
     return true;
-  } catch(e) { return false; }
+  } catch(e) { 
+    console.error('[FREEC] サイレント読み込みエラー:', issueName, e.message);
+    return false; 
+  }
 }
 
 async function loadIssueFromUrl(issueName, url) {
