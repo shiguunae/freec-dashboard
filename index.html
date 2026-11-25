@@ -680,7 +680,17 @@ function renderAll() {
 }
 
 // ====== 号ごとURL管理 ======
-const ISSUE_URLS = {};
+const ISSUE_URLS = {
+  '3月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQyMRPwe-1FmDalbVFhngWWEacrv5quFsBwhP3cU4ZQH7vSibp1q32EfU2xVBBPHF2GXKN8bBoVXqNd/pub?gid=420156692&single=true&output=csv',
+  '4月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1-83v_4tNqGuIWTQzllqPYOOamv7F6UhaO53IP863x6brHaR0LaKS4sRlQ5tdpzaj90Q89Fq4yM0-/pub?gid=1405160854&single=true&output=csv',
+  '5月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT9Gi34IZW6mHKnFEuSS82_bk2Ch5jzqVZylGv7l3M47HiVthR3il7aSQXXWVH_cqyYsuxBLVewCt-_/pub?gid=171044816&single=true&output=csv',
+  '6月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTwFaHw-HkAZAhZRU2rvVx0pCt_saoAvCATrwUxoasQ3igLDrFGegJ-ogvTOfBdnudoXNVTfsZ03tuk/pub?gid=1081137839&single=true&output=csv',
+  '7月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfmXdn_txIojouKnfReRYqf6Ddf3CWMuK3-eve3-9j1iJ0bR_744PI0uET3iiIRxFIIGEDg6QMA1JB/pub?gid=823598168&single=true&output=csv',
+  '8月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzXiI1wsRNOJZcH3ksF78fXXNq2Z9htYk00JH_2xjNfUMwe-HF9shWN453PXXV1NVSpYYxDwJKwgqR/pub?gid=1910865970&single=true&output=csv',
+  '9月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQCJUs0HlSqq60XGvtm2cRB9TGAsDX0nmqnPClVp8FvYJitNEAU_hBXrPkQhJQB1LUAKyz_GSMNCxk1/pub?gid=2001538998&single=true&output=csv',
+  '10月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTgv8cmee9kEScGGGjWzGxtDFnu9kGPzUEkuBmtCgFPM-Idw1mnJvOeVGOqRmlYUe58Tg96eM5ATaRP/pub?gid=1721441866&single=true&output=csv',
+  '12月号': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCUqz0YObfkPhJr07NuOprACNwJXlVqOSvji1J6jodLujytO_P015Fg2f49m3mnJwG_MGV6vV97vyB/pub?gid=1340977295&single=true&output=csv'
+};
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
@@ -739,6 +749,57 @@ function removeIssue(issue) {
 }
 
 // ====== CSV解析 ======
+// サイレント版（起動時・自動更新用、alertなし）
+async function loadIssueFromUrlSilent(issueName, url) {
+  if (!url || !url.includes('output=csv')) return false;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return false;
+    const text = await res.text();
+    if (text.trim().startsWith('<!')) return false;
+    function parseCSVRow(line) {
+      const result = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return false;
+    const headers = parseCSVRow(lines[0]);
+    const idxGender  = headers.findIndex(h => h.includes('性別'));
+    const idxLoc     = headers.findIndex(h => h.includes('住まい') || h.includes('居住') || h.includes('お住まい'));
+    const idxAge     = headers.findIndex(h => h.includes('年代'));
+    const idxPurpose = headers.findIndex(h => h.includes('目的'));
+    const idxGenre   = headers.findIndex(h => h.includes('ジャンル'));
+    if ([idxGender,idxLoc,idxAge,idxPurpose,idxGenre].every(i => i < 0)) return false;
+    const dataRows = lines.slice(1).map(parseCSVRow).filter(r => r.length > 1 && r.some(c => c));
+    const newData = { total: dataRows.length, gender: {}, location: {}, age: {}, purpose: {}, genre: {} };
+    dataRows.forEach(row => {
+      const count = (obj, key) => { const k = key && key.trim(); if (k) obj[k] = (obj[k] || 0) + 1; };
+      if (idxGender >= 0)  count(newData.gender,   row[idxGender]);
+      if (idxLoc >= 0)     count(newData.location,  row[idxLoc]);
+      if (idxAge >= 0)     count(newData.age,        row[idxAge]);
+      if (idxPurpose >= 0) count(newData.purpose,    row[idxPurpose]);
+      if (idxGenre >= 0) {
+        row[idxGenre].split(/[,、]/).forEach(g => {
+          const g2 = g.replace(/^"|"$/g,'').trim();
+          if (g2) newData.genre[g2] = (newData.genre[g2] || 0) + 1;
+        });
+      }
+    });
+    ISSUES[issueName] = newData;
+    rebuildTabs();
+    if (currentIssue === issueName) renderAll();
+    return true;
+  } catch(e) { return false; }
+}
+
 async function loadIssueFromUrl(issueName, url) {
   // URLの形式チェック
   if (!url.includes('output=csv')) {
@@ -848,11 +909,23 @@ function rebuildTabs() {
 buildTabs();
 renderAll();
 
+// 起動時に全登録URLを自動読み込み
+(async () => {
+  const entries = Object.entries(ISSUE_URLS);
+  if (entries.length > 0) {
+    document.getElementById('last-updated').textContent = '読み込み中...';
+    for (const [issue, url] of entries) {
+      await loadIssueFromUrlSilent(issue, url);
+    }
+    document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
+  }
+})();
+
 // 5分ごとに全登録URLを自動更新
 setInterval(async () => {
   const entries = Object.entries(ISSUE_URLS);
   for (const [issue, url] of entries) {
-    await loadIssueFromUrl(issue, url);
+    await loadIssueFromUrlSilent(issue, url);
   }
   if (entries.length === 0) {
     document.getElementById('last-updated').textContent = '最終更新: ' + new Date().toLocaleString('ja-JP');
